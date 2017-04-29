@@ -75,3 +75,15 @@ func TestWriteAndRead(t *testing.T) {
 		i++
 	}
 }
+
+func TestWriteEmptyFile(t *testing.T) {
+	assert := assert.New(t)
+
+	var buf bytes.Buffer
+	w := NewWriter(&buf, 10, 0) // no compression
+	assert.Nil(w.Close())
+
+	idx, e := LoadIndex(bytes.NewReader(buf.Bytes()))
+	assert.Nil(e)
+	assert.Equal(0, idx.Len())
+}
