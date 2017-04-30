@@ -11,24 +11,27 @@ import (
 	"github.com/golang/snappy"
 )
 
-// A Chunk contains the Header and optionally compressed records.
+// A Chunk contains the Header and optionally compressed records.  To
+// create a chunk, just use ch := &Chunk{}.
 type Chunk struct {
-	records [][]byte
-	size    int // sum of record lengths.
-}
-
-func newChunk() *Chunk {
-	return &Chunk{}
+	records  [][]byte
+	numBytes int // sum of record lengths.
 }
 
 func (ch *Chunk) add(record []byte) {
 	ch.records = append(ch.records, record)
-	ch.size += len(record)
+	ch.numBytes += len(record)
 }
 
 // dump the chunk into w, and clears the chunk and makes it ready for
 // the next add invocation.
 func (ch *Chunk) dump(w io.Writer, compressorIndex int) error {
+	// NOTE: don't check ch.numBytes instead, because empty
+	// records are allowed.
+	if len(ch.records) == 0 {
+		return nil
+	}
+
 	// Write raw records and their lengths into data buffer.
 	var data bytes.Buffer
 
@@ -55,7 +58,7 @@ func (ch *Chunk) dump(w io.Writer, compressorIndex int) error {
 		checkSum:       crc32.ChecksumIEEE(compressed.Bytes()),
 		compressor:     uint32(compressorIndex),
 		compressedSize: uint32(compressed.Len()),
-		len:            uint32(len(ch.records)),
+		numRecords:     uint32(len(ch.records)),
 	}
 
 	if _, e := hdr.write(w); e != nil {
@@ -68,7 +71,7 @@ func (ch *Chunk) dump(w io.Writer, compressorIndex int) error {
 
 	// Clear the current chunk.
 	ch.records = nil
-	ch.size = 0
+	ch.numBytes = 0
 
 	return nil
 }
@@ -114,13 +117,17 @@ func parseChunk(r io.ReadSeeker, chunkOffset int64) (*Chunk, error) {
 		return nil, fmt.Errorf("Failed to read chunk data: %v", e)
 	}
 
+	if hdr.checkSum != crc32.ChecksumIEEE(buf.Bytes()) {
+		return nil, fmt.Errorf("Checksum checking failed.")
+	}
+
 	deflated, e := deflateData(&buf, int(hdr.compressor))
 	if e != nil {
 		return nil, e
 	}
 
 	ch := &Chunk{}
-	for i := 0; i < int(hdr.len); i++ {
+	for i := 0; i < int(hdr.numRecords); i++ {
 		var rs [4]byte
 		if _, e = deflated.Read(rs[:]); e != nil {
 			return nil, fmt.Errorf("Failed to read record length: %v", e)
@@ -132,7 +139,7 @@ func parseChunk(r io.ReadSeeker, chunkOffset int64) (*Chunk, error) {
 		}
 
 		ch.records = append(ch.records, r)
-		ch.size += len(r)
+		ch.numBytes += len(r)
 	}
 
 	return ch, nil

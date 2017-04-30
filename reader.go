@@ -9,7 +9,7 @@ import (
 type Index struct {
 	chunkOffsets []int64
 	chunkLens    []uint32
-	records      int
+	numRecords   int // the number of all records in a file.
 }
 
 // LoadIndex scans the file and parse chunkOffsets, chunkLens, and len.
@@ -24,8 +24,8 @@ func LoadIndex(r io.ReadSeeker) (*Index, error) {
 			break
 		} else {
 			f.chunkOffsets = append(f.chunkOffsets, offset)
-			f.chunkLens = append(f.chunkLens, hdr.len)
-			f.records += int(hdr.len)
+			f.chunkLens = append(f.chunkLens, hdr.numRecords)
+			f.numRecords += int(hdr.numRecords)
 			offset, e = r.Seek(int64(hdr.compressedSize), io.SeekCurrent)
 			if e != nil {
 				break
@@ -39,9 +39,9 @@ func LoadIndex(r io.ReadSeeker) (*Index, error) {
 	return nil, e
 }
 
-// Len returns the total number of records in a RecordIO file.
-func (r *Index) Len() int {
-	return r.records
+// NumRecords returns the total number of records in a RecordIO file.
+func (r *Index) NumRecords() int {
+	return r.numRecords
 }
 
 // Locate returns the index of chunk that contains the given record,
@@ -58,7 +58,7 @@ func (r *Index) Locate(recordIndex int) (int, int) {
 	return -1, -1
 }
 
-// Scanner scans records in a specified range within [0, records).
+// Scanner scans records in a specified range within [0, numRecords).
 type Scanner struct {
 	reader          io.ReadSeeker
 	index           *Index
@@ -74,8 +74,8 @@ func NewScanner(r io.ReadSeeker, index *Index, start, len int) *Scanner {
 	if start < 0 {
 		start = 0
 	}
-	if len < 0 || start+len >= index.Len() {
-		len = index.Len() - start
+	if len < 0 || start+len >= index.NumRecords() {
+		len = index.NumRecords() - start
 	}
 
 	return &Scanner{
@@ -85,7 +85,7 @@ func NewScanner(r io.ReadSeeker, index *Index, start, len int) *Scanner {
 		end:        start + len,
 		cur:        start - 1, // The intial status required by Scan.
 		chunkIndex: -1,
-		chunk:      newChunk(),
+		chunk:      &Chunk{},
 	}
 }
 

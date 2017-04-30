@@ -35,7 +35,7 @@ func TestWriteAndRead(t *testing.T) {
 		"12"}
 
 	var buf bytes.Buffer
-	w := NewWriter(&buf, 10, 0) // no compression.
+	w := NewWriter(&buf, 10, NoCompression) // use a small maxChunkSize.
 
 	n, e := w.Write([]byte(data[0])) // not exceed chunk size.
 	assert.Nil(e)
@@ -80,10 +80,11 @@ func TestWriteEmptyFile(t *testing.T) {
 	assert := assert.New(t)
 
 	var buf bytes.Buffer
-	w := NewWriter(&buf, 10, 0) // no compression
+	w := NewWriter(&buf, 10, NoCompression) // use a small maxChunkSize.
 	assert.Nil(w.Close())
+	assert.Equal(0, buf.Len())
 
 	idx, e := LoadIndex(bytes.NewReader(buf.Bytes()))
 	assert.Nil(e)
-	assert.Equal(0, idx.Len())
+	assert.Equal(0, idx.NumRecords())
 }
