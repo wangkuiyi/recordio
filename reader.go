@@ -1,9 +1,6 @@
 package recordio
 
-import (
-	"io"
-	"log"
-)
+import "io"
 
 // Index consists offsets and sizes of the consequetive chunks in a RecordIO file.
 type Index struct {
@@ -20,16 +17,18 @@ func LoadIndex(r io.ReadSeeker) (*Index, error) {
 	var hdr *Header
 
 	for {
-		if hdr, e = parseHeader(r); e != nil {
+		hdr, e = parseHeader(r)
+		if e != nil {
 			break
-		} else {
-			f.chunkOffsets = append(f.chunkOffsets, offset)
-			f.chunkLens = append(f.chunkLens, hdr.numRecords)
-			f.numRecords += int(hdr.numRecords)
-			offset, e = r.Seek(int64(hdr.compressedSize), io.SeekCurrent)
-			if e != nil {
-				break
-			}
+		}
+
+		f.chunkOffsets = append(f.chunkOffsets, offset)
+		f.chunkLens = append(f.chunkLens, hdr.numRecords)
+		f.numRecords += int(hdr.numRecords)
+
+		offset, e = r.Seek(int64(hdr.compressedSize), io.SeekCurrent)
+		if e != nil {
+			break
 		}
 	}
 
@@ -69,7 +68,8 @@ type Scanner struct {
 }
 
 // NewScanner creates a scanner that sequencially reads records in the
-// range [start, start+len).
+// range [start, start+len).  If start < 0, it scans from the
+// beginning.  If len < 0, it scans till the end of file.
 func NewScanner(r io.ReadSeeker, index *Index, start, len int) *Scanner {
 	if start < 0 {
 		start = 0
@@ -108,10 +108,7 @@ func (s *Scanner) Scan() bool {
 
 // Record returns the record under the current cursor.
 func (s *Scanner) Record() []byte {
-	ci, ri := s.index.Locate(s.cur)
-	if s.chunkIndex != ci {
-		log.Fatalf("Must call Scan before Record")
-	}
+	_, ri := s.index.Locate(s.cur)
 	return s.chunk.records[ri]
 }
 
