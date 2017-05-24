@@ -1,90 +1,81 @@
-package recordio
+package recordio_test
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
-	"unsafe"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/wangkuiyi/recordio"
 )
 
-func TestChunkHead(t *testing.T) {
-	assert := assert.New(t)
+func TestWriteRead(t *testing.T) {
+	const total = 1000
+	var buf bytes.Buffer
+	w := recordio.NewWriter(&buf, 0, -1)
+	for i := 0; i < total; i++ {
+		_, err := w.Write(make([]byte, i))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	w.Close()
 
-	c := &Header{
-		checkSum:       123,
-		compressor:     456,
-		compressedSize: 789,
+	idx, err := recordio.LoadIndex(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	var buf bytes.Buffer
-	_, e := c.write(&buf)
-	assert.Nil(e)
+	if idx.NumRecords() != total {
+		t.Fatal("num record does not match:", idx.NumRecords(), total)
+	}
 
-	cc, e := parseHeader(&buf)
-	assert.Nil(e)
-	assert.Equal(c, cc)
-}
-
-func TestWriteAndRead(t *testing.T) {
-	assert := assert.New(t)
-
-	data := []string{
-		"12345",
-		"1234",
-		"12"}
-
-	var buf bytes.Buffer
-	w := NewWriter(&buf, 10, NoCompression) // use a small maxChunkSize.
-
-	n, e := w.Write([]byte(data[0])) // not exceed chunk size.
-	assert.Nil(e)
-	assert.Equal(5, n)
-
-	n, e = w.Write([]byte(data[1])) // not exceed chunk size.
-	assert.Nil(e)
-	assert.Equal(4, n)
-
-	n, e = w.Write([]byte(data[2])) // exeeds chunk size, dump and create a new chunk.
-	assert.Nil(e)
-	assert.Equal(n, 2)
-
-	assert.Nil(w.Close()) // flush the second chunk.
-	assert.Nil(w.Writer)
-
-	n, e = w.Write([]byte("anything")) // not effective after close.
-	assert.NotNil(e)
-	assert.Equal(n, 0)
-
-	idx, e := LoadIndex(bytes.NewReader(buf.Bytes()))
-	assert.Nil(e)
-	assert.Equal([]uint32{2, 1}, idx.chunkLens)
-	assert.Equal(
-		[]int64{0,
-			int64(4 + // magic number
-				unsafe.Sizeof(Header{}) +
-				5 + // first record
-				4 + // second record
-				2*4)}, // two record legnths
-		idx.chunkOffsets)
-
-	s := NewScanner(bytes.NewReader(buf.Bytes()), idx, -1, -1)
+	s := recordio.NewScanner(bytes.NewReader(buf.Bytes()), idx, -1, -1)
 	i := 0
 	for s.Scan() {
-		assert.Equal(data[i], string(s.Record()))
+		if !reflect.DeepEqual(s.Record(), make([]byte, i)) {
+			t.Fatal("not equal:", len(s.Record()), len(make([]byte, i)))
+		}
 		i++
+	}
+
+	if i != total {
+		t.Fatal("total count not match:", i, total)
 	}
 }
 
-func TestWriteEmptyFile(t *testing.T) {
-	assert := assert.New(t)
-
+func TestChunkIndex(t *testing.T) {
+	const total = 1000
 	var buf bytes.Buffer
-	w := NewWriter(&buf, 10, NoCompression) // use a small maxChunkSize.
-	assert.Nil(w.Close())
-	assert.Equal(0, buf.Len())
+	w := recordio.NewWriter(&buf, 0, -1)
+	for i := 0; i < total; i++ {
+		_, err := w.Write(make([]byte, i))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	w.Close()
 
-	idx, e := LoadIndex(bytes.NewReader(buf.Bytes()))
-	assert.Nil(e)
-	assert.Equal(0, idx.NumRecords())
+	idx, err := recordio.LoadIndex(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if idx.NumChunks() != total {
+		t.Fatal("unexpected chunk num:", idx.NumChunks(), total)
+	}
+
+	for i := 0; i < total; i++ {
+		newIdx := idx.ChunkIndex(i)
+		s := recordio.NewScanner(bytes.NewReader(buf.Bytes()), newIdx, -1, -1)
+		j := 0
+		for s.Scan() {
+			if !reflect.DeepEqual(s.Record(), make([]byte, i)) {
+				t.Fatal("not equal:", len(s.Record()), len(make([]byte, i)))
+			}
+			j++
+		}
+		if j != 1 {
+			t.Fatal("unexpected record per chunk:", j)
+		}
+	}
 }

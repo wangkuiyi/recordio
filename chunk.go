@@ -76,13 +76,21 @@ func (ch *Chunk) dump(w io.Writer, compressorIndex int) error {
 	return nil
 }
 
+type noopCompressor struct {
+	*bytes.Buffer
+}
+
+func (c *noopCompressor) Close() error {
+	return nil
+}
+
 func compressData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
 	compressed := new(bytes.Buffer)
-	var compressor io.Writer
+	var compressor io.WriteCloser
 
 	switch compressorIndex {
 	case NoCompression:
-		compressor = compressed
+		compressor = &noopCompressor{compressed}
 	case Snappy:
 		compressor = snappy.NewBufferedWriter(compressed)
 	case Gzip:
@@ -94,6 +102,7 @@ func compressData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
 	if _, e := io.Copy(compressor, src); e != nil {
 		return nil, fmt.Errorf("Failed to compress chunk data: %v", e)
 	}
+	compressor.Close()
 
 	return compressed, nil
 }
