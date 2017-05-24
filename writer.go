@@ -21,9 +21,14 @@ type Writer struct {
 // using the deflate algorithm given compression level.  Note that
 // level 0 means no compression and -1 means default compression.
 func NewWriter(w io.Writer, maxChunkSize, compressor int) *Writer {
-	if maxChunkSize <= 0 {
+	if maxChunkSize < 0 {
 		maxChunkSize = defaultMaxChunkSize
 	}
+
+	if compressor == -1 {
+		compressor = defaultCompressor
+	}
+
 	return &Writer{
 		Writer:       w,
 		chunk:        &Chunk{},

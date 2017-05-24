@@ -7,8 +7,6 @@ import (
 )
 
 const (
-	magicNumber uint32 = 0x01020304
-
 	// NoCompression means writing raw chunk data into files.
 	// With other choices, chunks are compressed before written.
 	NoCompression = iota
@@ -19,6 +17,11 @@ const (
 	// Gzip is a well-known compression algorithm.  It is
 	// recommmended only you are looking for compression ratio.
 	Gzip
+)
+
+const (
+	magicNumber       uint32 = 0x01020304
+	defaultCompressor        = Snappy
 )
 
 // Header is the metadata of Chunk.

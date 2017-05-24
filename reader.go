@@ -1,12 +1,16 @@
 package recordio
 
-import "io"
+import (
+	"fmt"
+	"io"
+)
 
 // Index consists offsets and sizes of the consequetive chunks in a RecordIO file.
 type Index struct {
 	chunkOffsets []int64
 	chunkLens    []uint32
-	numRecords   int // the number of all records in a file.
+	numRecords   int   // the number of all records in a file.
+	chunkRecords []int // the number of records in chunks.
 }
 
 // LoadIndex scans the file and parse chunkOffsets, chunkLens, and len.
@@ -19,11 +23,15 @@ func LoadIndex(r io.ReadSeeker) (*Index, error) {
 	for {
 		hdr, e = parseHeader(r)
 		if e != nil {
+			if e != io.EOF {
+				fmt.Println("parse err:", e)
+			}
 			break
 		}
 
 		f.chunkOffsets = append(f.chunkOffsets, offset)
 		f.chunkLens = append(f.chunkLens, hdr.numRecords)
+		f.chunkRecords = append(f.chunkRecords, int(hdr.numRecords))
 		f.numRecords += int(hdr.numRecords)
 
 		offset, e = r.Seek(int64(hdr.compressedSize), io.SeekCurrent)
@@ -41,6 +49,21 @@ func LoadIndex(r io.ReadSeeker) (*Index, error) {
 // NumRecords returns the total number of records in a RecordIO file.
 func (r *Index) NumRecords() int {
 	return r.numRecords
+}
+
+// NumChunks returns the total number of chunks in a RecordIO file.
+func (r *Index) NumChunks() int {
+	return len(r.chunkLens)
+}
+
+// ChunkIndex return the Index of i-th Chunk.
+func (r *Index) ChunkIndex(i int) *Index {
+	idx := &Index{}
+	idx.chunkOffsets = []int64{r.chunkOffsets[i]}
+	idx.chunkLens = []uint32{r.chunkLens[i]}
+	idx.chunkRecords = []int{r.chunkRecords[i]}
+	idx.numRecords = idx.chunkRecords[0]
+	return idx
 }
 
 // Locate returns the index of chunk that contains the given record,

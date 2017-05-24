@@ -76,9 +76,17 @@ func (ch *Chunk) dump(w io.Writer, compressorIndex int) error {
 	return nil
 }
 
+type dummyCloser struct {
+	bytes.Buffer
+}
+
+func (c *dummyCloser) Close() error {
+	return nil
+}
+
 func compressData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
-	compressed := new(bytes.Buffer)
-	var compressor io.Writer
+	compressed := &dummyCloser{}
+	var compressor io.WriteCloser
 
 	switch compressorIndex {
 	case NoCompression:
@@ -94,8 +102,9 @@ func compressData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
 	if _, e := io.Copy(compressor, src); e != nil {
 		return nil, fmt.Errorf("Failed to compress chunk data: %v", e)
 	}
+	compressor.Close()
 
-	return compressed, nil
+	return &compressed.Buffer, nil
 }
 
 // parse the specified chunk from r.
