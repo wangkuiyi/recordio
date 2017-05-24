@@ -17,9 +17,7 @@ const (
 	// Gzip is a well-known compression algorithm.  It is
 	// recommmended only you are looking for compression ratio.
 	Gzip
-)
 
-const (
 	magicNumber       uint32 = 0x01020304
 	defaultCompressor        = Snappy
 )

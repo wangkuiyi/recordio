@@ -76,21 +76,21 @@ func (ch *Chunk) dump(w io.Writer, compressorIndex int) error {
 	return nil
 }
 
-type dummyCloser struct {
-	bytes.Buffer
+type noopCompressor struct {
+	*bytes.Buffer
 }
 
-func (c *dummyCloser) Close() error {
+func (c *noopCompressor) Close() error {
 	return nil
 }
 
 func compressData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
-	compressed := &dummyCloser{}
+	compressed := new(bytes.Buffer)
 	var compressor io.WriteCloser
 
 	switch compressorIndex {
 	case NoCompression:
-		compressor = compressed
+		compressor = &noopCompressor{compressed}
 	case Snappy:
 		compressor = snappy.NewBufferedWriter(compressed)
 	case Gzip:
@@ -104,7 +104,7 @@ func compressData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
 	}
 	compressor.Close()
 
-	return &compressed.Buffer, nil
+	return compressed, nil
 }
 
 // parse the specified chunk from r.

@@ -1,9 +1,6 @@
 package recordio
 
-import (
-	"fmt"
-	"io"
-)
+import "io"
 
 // Index consists offsets and sizes of the consequetive chunks in a RecordIO file.
 type Index struct {
@@ -23,9 +20,6 @@ func LoadIndex(r io.ReadSeeker) (*Index, error) {
 	for {
 		hdr, e = parseHeader(r)
 		if e != nil {
-			if e != io.EOF {
-				fmt.Println("parse err:", e)
-			}
 			break
 		}
 

@@ -25,7 +25,7 @@ func NewWriter(w io.Writer, maxChunkSize, compressor int) *Writer {
 		maxChunkSize = defaultMaxChunkSize
 	}
 
-	if compressor == -1 {
+	if compressor < 0 {
 		compressor = defaultCompressor
 	}
 
