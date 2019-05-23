@@ -50,16 +50,6 @@ func (r *Index) NumChunks() int {
 	return len(r.chunkLens)
 }
 
-// ChunkIndex return the Index of i-th Chunk.
-func (r *Index) ChunkIndex(i int) *Index {
-	idx := &Index{}
-	idx.chunkOffsets = []int64{r.chunkOffsets[i]}
-	idx.chunkLens = []uint32{r.chunkLens[i]}
-	idx.chunkRecords = []int{r.chunkRecords[i]}
-	idx.numRecords = idx.chunkRecords[0]
-	return idx
-}
-
 // Locate returns the index of chunk that contains the given record,
 // and the record index within the chunk.  It returns (-1, -1) if the
 // record is out of range.
