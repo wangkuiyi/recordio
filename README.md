@@ -73,6 +73,7 @@ class Scanner(objec):
 
    def close(self):
       """Closes the scanner"""
+      ...
 
 class Writer(object):
    def __init__(self, path):
