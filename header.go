@@ -22,15 +22,15 @@ const (
 	defaultCompressor        = Snappy
 )
 
-// Header is the metadata of Chunk.
-type Header struct {
+// header is the metadata of Chunk.
+type header struct {
 	checkSum       uint32
 	compressor     uint32
 	compressedSize uint32
 	numRecords     uint32
 }
 
-func (c *Header) write(w io.Writer) (int, error) {
+func (c *header) write(w io.Writer) (int, error) {
 	var buf [20]byte
 	binary.LittleEndian.PutUint32(buf[0:4], magicNumber)
 	binary.LittleEndian.PutUint32(buf[4:8], c.checkSum)
@@ -40,7 +40,7 @@ func (c *Header) write(w io.Writer) (int, error) {
 	return w.Write(buf[:])
 }
 
-func parseHeader(r io.Reader) (*Header, error) {
+func parseHeader(r io.Reader) (*header, error) {
 	var buf [20]byte
 	if _, e := r.Read(buf[:]); e != nil {
 		return nil, e
@@ -50,7 +50,7 @@ func parseHeader(r io.Reader) (*Header, error) {
 		return nil, fmt.Errorf("Failed to parse magic number")
 	}
 
-	return &Header{
+	return &header{
 		checkSum:       binary.LittleEndian.Uint32(buf[4:8]),
 		compressor:     binary.LittleEndian.Uint32(buf[8:12]),
 		compressedSize: binary.LittleEndian.Uint32(buf[12:16]),

@@ -54,7 +54,7 @@ func (ch *Chunk) dump(w io.Writer, compressorIndex int) error {
 	}
 
 	// Write chunk header and compressed data.
-	hdr := &Header{
+	hdr := &header{
 		checkSum:       crc32.ChecksumIEEE(compressed.Bytes()),
 		compressor:     uint32(compressorIndex),
 		compressedSize: uint32(compressed.Len()),
@@ -110,7 +110,7 @@ func compressData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
 // parse the specified chunk from r.
 func parseChunk(r io.ReadSeeker, chunkOffset int64) (*Chunk, error) {
 	var e error
-	var hdr *Header
+	var hdr *header
 
 	if _, e = r.Seek(chunkOffset, io.SeekStart); e != nil {
 		return nil, fmt.Errorf("Failed to seek chunk: %v", e)
