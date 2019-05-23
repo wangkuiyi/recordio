@@ -21,6 +21,7 @@ w := recordio.NewWriter(f)
 w.Write([]byte("Hello"))
 w.Write([]byte("World!"))
 w.Close()
+f.Close()
 ```
 
 ## Read
@@ -34,8 +35,7 @@ w.Close()
    ```
 
 2. Create one or more scanner to read a range of records.  The
-   following example reads the range
-   [1, 3), i.e., the second and the third records:
+   following example reads 3 records starting from record 1.
 
    ```go
    f, e := os.Open("a_file.recordio")
