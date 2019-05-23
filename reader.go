@@ -70,7 +70,7 @@ type Scanner struct {
 	index           *Index
 	start, end, cur int
 	chunkIndex      int
-	chunk           *Chunk
+	chunk           *chunk
 	err             error
 }
 
@@ -92,7 +92,7 @@ func NewScanner(r io.ReadSeeker, index *Index, start, len int) *Scanner {
 		end:        start + len,
 		cur:        start - 1, // The intial status required by Scan.
 		chunkIndex: -1,
-		chunk:      &Chunk{},
+		chunk:      &chunk{},
 	}
 }
 

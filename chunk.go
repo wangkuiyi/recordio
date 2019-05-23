@@ -11,21 +11,21 @@ import (
 	"github.com/golang/snappy"
 )
 
-// A Chunk contains the Header and optionally compressed records.  To
-// create a chunk, just use ch := &Chunk{}.
-type Chunk struct {
+// A chunk contains the Header and optionally compressed records.  To
+// create a chunk, just use ch := &chunk{}.
+type chunk struct {
 	records  [][]byte
 	numBytes int // sum of record lengths.
 }
 
-func (ch *Chunk) add(record []byte) {
+func (ch *chunk) add(record []byte) {
 	ch.records = append(ch.records, record)
 	ch.numBytes += len(record)
 }
 
 // dump the chunk into w, and clears the chunk and makes it ready for
 // the next add invocation.
-func (ch *Chunk) dump(w io.Writer, compressorIndex int) error {
+func (ch *chunk) dump(w io.Writer, compressorIndex int) error {
 	// NOTE: don't check ch.numBytes instead, because empty
 	// records are allowed.
 	if len(ch.records) == 0 {
@@ -108,7 +108,7 @@ func compressData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
 }
 
 // parse the specified chunk from r.
-func parseChunk(r io.ReadSeeker, chunkOffset int64) (*Chunk, error) {
+func parseChunk(r io.ReadSeeker, chunkOffset int64) (*chunk, error) {
 	var e error
 	var hdr *header
 
@@ -135,7 +135,7 @@ func parseChunk(r io.ReadSeeker, chunkOffset int64) (*Chunk, error) {
 		return nil, e
 	}
 
-	ch := &Chunk{}
+	ch := &chunk{}
 	for i := 0; i < int(hdr.numRecords); i++ {
 		var rs [4]byte
 		if _, e = deflated.Read(rs[:]); e != nil {

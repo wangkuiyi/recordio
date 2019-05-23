@@ -12,7 +12,7 @@ const (
 // Writer creates a RecordIO file.
 type Writer struct {
 	io.Writer    // Set to nil to mark a closed writer.
-	chunk        *Chunk
+	chunk        *chunk
 	maxChunkSize int // total records size, excluding metadata, before compression.
 	compressor   int
 }
@@ -31,7 +31,7 @@ func NewWriter(w io.Writer, maxChunkSize, compressor int) *Writer {
 
 	return &Writer{
 		Writer:       w,
-		chunk:        &Chunk{},
+		chunk:        &chunk{},
 		maxChunkSize: maxChunkSize,
 		compressor:   compressor}
 }
