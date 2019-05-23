@@ -15,7 +15,7 @@ func LoadIndex(r io.ReadSeeker) (*Index, error) {
 	f := &Index{}
 	offset := int64(0)
 	var e error
-	var hdr *Header
+	var hdr *header
 
 	for {
 		hdr, e = parseHeader(r)

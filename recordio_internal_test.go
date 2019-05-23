@@ -11,7 +11,7 @@ import (
 func TestChunkHead(t *testing.T) {
 	assert := assert.New(t)
 
-	c := &Header{
+	c := &header{
 		checkSum:       123,
 		compressor:     456,
 		compressedSize: 789,
@@ -62,7 +62,7 @@ func TestWriteAndRead(t *testing.T) {
 	assert.Equal(
 		[]int64{0,
 			int64(4 + // magic number
-				unsafe.Sizeof(Header{}) +
+				unsafe.Sizeof(header{}) +
 				5 + // first record
 				4 + // second record
 				2*4)}, // two record legnths
