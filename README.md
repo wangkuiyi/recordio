@@ -47,3 +47,44 @@ f.Close()
       log.Fatalf("Something wrong with scanning: %v", e)
    }
    ```
+
+## Python Wrapper
+
+Python wrapper exposes three classes `Index`, `Writer` and `Scanner`. The interfaces are defined as following:
+
+```python
+class Index(object):
+   def __init__(self, path):
+      """Loads index from file"""
+      ...
+   
+   def num_records(self):
+      """Returns total number of records in the file."""
+      ...
+
+class Scanner(objec):
+   def __init__(self, path, start=0, len=-1, index=None):
+      """Creates a scanner for the file. Use the index if provided."""
+      ...
+   
+   def record(self):
+      """Returns the current record. Returns None if the end is reached"""
+      ...
+
+   def close(self):
+      """Closes the scanner"""
+      ...
+
+class Writer(object):
+   def __init__(self, path):
+      """Creates a writer"""
+      ...
+
+   def write(self, record):
+      """Writes the record to file"""
+      ...
+
+   def close(self):
+      """Closes the writer"""
+      ...
+```
