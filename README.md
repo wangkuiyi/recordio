@@ -1,5 +1,7 @@
 # RecordIO
 
+[![Build Status](https://travis-ci.org/wangkuiyi/recordio.svg?branch=develop)](https://travis-ci.org/wangkuiyi/recordio) [![GoDoc](https://godoc.org/github.com/wangkuiyi/recordio?status.svg)](https://godoc.org/github.com/wangkuiyi/recordio) [![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](LICENSE)
+
 RecordIO is a file format created for [PaddlePaddle Elastic Deep Learning](https://kubernetes.io/blog/2017/12/paddle-paddle-fluid-elastic-learning/).  It is generally useful for distributed computing.
 
 ## Motivations
