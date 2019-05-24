@@ -1,5 +1,7 @@
 # RecordIO
 
+[![Build Status](https://travis-ci.org/wangkuiyi/recordio.svg?branch=develop)](https://travis-ci.org/wangkuiyi/recordio) [![GoDoc](https://godoc.org/github.com/wangkuiyi/recordio?status.svg)](https://godoc.org/github.com/wangkuiyi/recordio) [![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](LICENSE)
+
 RecordIO is a file format created for [PaddlePaddle Elastic Deep Learning](https://kubernetes.io/blog/2017/12/paddle-paddle-fluid-elastic-learning/).  It is generally useful for distributed computing.
 
 ## Motivations
@@ -21,6 +23,7 @@ w := recordio.NewWriter(f)
 w.Write([]byte("Hello"))
 w.Write([]byte("World!"))
 w.Close()
+f.Close()
 ```
 
 ## Read
@@ -34,8 +37,7 @@ w.Close()
    ```
 
 2. Create one or more scanner to read a range of records.  The
-   following example reads the range
-   [1, 3), i.e., the second and the third records:
+   following example reads 3 records starting from record 1.
 
    ```go
    f, e := os.Open("a_file.recordio")
@@ -47,3 +49,44 @@ w.Close()
       log.Fatalf("Something wrong with scanning: %v", e)
    }
    ```
+
+## Python Wrapper
+
+Python wrapper exposes three classes `Index`, `Writer` and `Scanner`. The interfaces are defined as following:
+
+```python
+class Index(object):
+   def __init__(self, path):
+      """Loads index from file"""
+      ...
+   
+   def num_records(self):
+      """Returns total number of records in the file."""
+      ...
+
+class Scanner(objec):
+   def __init__(self, path, start=0, len=-1, index=None):
+      """Creates a scanner for the file. Use the index if provided."""
+      ...
+   
+   def record(self):
+      """Returns the current record. Returns None if the end is reached"""
+      ...
+
+   def close(self):
+      """Closes the scanner"""
+      ...
+
+class Writer(object):
+   def __init__(self, path):
+      """Creates a writer"""
+      ...
+
+   def write(self, record):
+      """Writes the record to file"""
+      ...
+
+   def close(self):
+      """Closes the writer"""
+      ...
+```
