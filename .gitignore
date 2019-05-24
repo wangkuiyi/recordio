@@ -1,1 +1,6 @@
 *~
+*.so
+*.pyc
+*.swp
+__pycache__/
+
