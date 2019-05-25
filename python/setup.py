@@ -1,9 +1,4 @@
-from setuptools import setup, Distribution
-
-
-class BinaryDistribution(Distribution):
-    def has_ext_modules(foo):
-        return True
+from setuptools import setup, Extension, find_packages
 
 
 setup(
@@ -12,7 +7,8 @@ setup(
     description="recordio file format support",
     url="https://github.com/wangkuiyi/recordio",
     license="Apache 2.0",
-    packages=["recordio"],
-    package_data={"recordio": ["librecordio.so"]},
-    distclass=BinaryDistribution,
+    packages=find_packages(exclude=["tests"]),
+    build_golang={'root': 'github.com/wangkuyi/recordio'},
+    ext_modules=[Extension('recordio.librecordio', ['crecordio.go'])],
+    setup_requires=['setuptools-golang'],
 )

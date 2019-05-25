@@ -2,7 +2,11 @@ import ctypes
 import os
 import six
 
-path = os.path.join(os.path.dirname(__file__), "librecordio.so")
+from distutils.sysconfig import get_config_var
+
+path = os.path.join(
+    os.path.dirname(__file__), "librecordio" + get_config_var("SO")
+)
 lib = ctypes.cdll.LoadLibrary(path)
 
 
