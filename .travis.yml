@@ -1,11 +1,31 @@
-python: 
-- 3.5
-- 3.6
-- 3.7
-
 matrix:
   include:
     - language: python
+      python: 3.5
+
+      cache: pip
+
+      install: 
+      - cd python
+      - python setup.py -q install
+
+      script:
+      - python setup.py -q test
+
+    - language: python
+      python: 3.6
+
+      cache: pip
+
+      install: 
+      - cd python
+      - python setup.py -q install
+
+      script:
+      - python setup.py -q test
+
+    - language: python
+      python: 3.7
 
       cache: pip
 
