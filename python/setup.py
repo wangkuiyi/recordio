@@ -10,5 +10,6 @@ setup(
     packages=find_packages(exclude=["tests"]),
     build_golang={'root': 'github.com/wangkuyi/recordio'},
     ext_modules=[Extension('recordio.librecordio', ['crecordio.go'])],
-    setup_requires=['setuptools-golang'],
+    setup_requires=['setuptools-golang', 'pytest-runner'],
+    tests_require=['pytest'],
 )
