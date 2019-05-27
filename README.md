@@ -18,10 +18,11 @@ RecordIO is such a file format.
 ## Write
 
 ```go
-f, e := os.Create("a_file.recordio")
-w := recordio.NewWriter(f)
+f, _ := os.Create("a_file.recordio")
+w := recordio.NewWriter(f, -1, -1)
 w.Write([]byte("Hello"))
-w.Write([]byte("World!"))
+w.Write([]byte("World,"))
+w.Write([]byte("RecordIO!"))
 w.Close()
 f.Close()
 ```
@@ -31,23 +32,23 @@ f.Close()
 1. Load chunk index:
 
    ```go
-   f, e := os.Open("a_file.recordio")
-   idx, e := recordio.LoadIndex(f)
-   fmt.Println("Total records: ", idx.Len())
+   f, _ := os.Open("a_file.recordio")
+   idx, _ := recordio.LoadIndex(f)
+   fmt.Println("Total records: ", idx.NumRecords())
    ```
 
 2. Create one or more scanner to read a range of records.  The
-   following example reads 3 records starting from record 1.
+   following example reads 2 records starting from record 1.
 
    ```go
-   f, e := os.Open("a_file.recordio")
-   s := recrodio.NewScanner(f, idx, 1, 3)
+   s := recordio.NewScanner(f, idx, 1, 2)
    for s.Scan() {
       fmt.Println(string(s.Record()))
    }
-   if s.Err() != nil && s.Err() != io.EOF {
-      log.Fatalf("Something wrong with scanning: %v", e)
+   if s.Error() != nil && s.Error() != io.EOF {
+      fmt.Println("Something wrong with scanning: %v", s.Error())
    }
+   f.Close()
    ```
 
 ## Python Wrapper
