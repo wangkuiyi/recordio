@@ -1,3 +1,5 @@
+// Note: this file is part of python extension to recordio. It should be put
+// in the same directory of setup.py so pip to find it.
 package main
 
 /*
