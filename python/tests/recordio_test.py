@@ -1,11 +1,21 @@
 import unittest
 
+import tempfile
+import os.path
 import recordio
 
 
 class TestAll(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp_dir = tempfile.TemporaryDirectory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp_dir.cleanup()
+
     def test_write_read(self):
-        path = "/tmp/1.record"
+        path = os.path.join(self.tmp_dir.name, "1.record")
         w = recordio.Writer(path)
         w.write(b"1")
         w.write(b"2")
@@ -27,7 +37,7 @@ class TestAll(unittest.TestCase):
         r.close()
 
     def test_index(self):
-        path = "/tmp/1.record"
+        path = os.path.join(self.tmp_dir.name, "1.record")
         w = recordio.Writer(path)
         w.write(b"1")
         w.write(b"2")
@@ -66,7 +76,7 @@ class TestAll(unittest.TestCase):
 
         # Scanner open error. Here we pass in an index. so the opening of
         # recordio file is tested.
-        path = "/tmp/1.record"
+        path = os.path.join(self.tmp_dir.name, "1.record")
         w = recordio.Writer(path)
         w.write(b"1")
         w = recordio.Writer(path)
@@ -79,7 +89,7 @@ class TestAll(unittest.TestCase):
 
     def test_utf8_values(self):
         # filename can be in UTF-8
-        path = "/tmp/ファイル.recordio"
+        path = os.path.join(self.tmp_dir.name, "ファイル.recordio")
         w = recordio.Writer(path)
         # UTF-8 characters need to be encoded explicitly.
         w.write("你好世界".encode())
@@ -92,6 +102,9 @@ class TestAll(unittest.TestCase):
             w.write("你好世界")
         with self.assertRaises(ValueError):
             w.write("שלום בעולם")
+        with self.assertRaises(ValueError):
+            w.write("Hello world")
+        
         w.close()
 
         idx = recordio.Index(path)
