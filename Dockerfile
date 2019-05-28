@@ -8,6 +8,6 @@ ENV PATH=/usr/local/go/bin:$PATH
 RUN pip install --upgrade pip
 
 RUN echo "#!/bin/bash" > /build.bash
-RUN echo "pip wheel /work/python" >> /build.bash
+RUN echo "cd /work/python; pip wheel ." >> /build.bash
 RUN chmod +x /build.bash
 CMD ["/build.bash"]
