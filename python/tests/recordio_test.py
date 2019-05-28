@@ -2,6 +2,7 @@ import unittest
 
 import tempfile
 import os.path
+import random
 import recordio
 
 
@@ -35,6 +36,24 @@ class TestAll(unittest.TestCase):
         self.assertEqual(r.record(), None)
         self.assertEqual(r.record(), None)
         r.close()
+
+    def test_big_write_read(self):
+        gen_rec = lambda: bytes(
+            bytearray(random.getrandbits(8) for _ in range(4 * 1024 * 1024))
+        )
+        # 10 records, each has size 4Mi bytes.
+        records = [gen_rec() for _ in range(10)]
+
+        path = os.path.join(self.tmp_dir.name, "big.recordio")
+        w = recordio.Writer(path)
+        for r in records:
+            w.write(r)
+        w.close()
+
+        s = recordio.Scanner(path)
+        for r in records:
+            self.assertEqual(r, s.record())
+        s.close()
 
     def test_index(self):
         path = os.path.join(self.tmp_dir.name, "1.record")
@@ -95,7 +114,7 @@ class TestAll(unittest.TestCase):
         w.write("你好世界".encode())
         w.write("שלום בעולם".encode())
         # ASCII characters don't need encoding.
-        w.write(b"Hello world")     
+        w.write(b"Hello world")
 
         # Non-encoded string will be rejected.
         with self.assertRaises(ValueError):
@@ -104,7 +123,7 @@ class TestAll(unittest.TestCase):
             w.write("שלום בעולם")
         with self.assertRaises(ValueError):
             w.write("Hello world")
-        
+
         w.close()
 
         idx = recordio.Index(path)

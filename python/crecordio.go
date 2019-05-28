@@ -151,10 +151,8 @@ func recordio_read(h C.handle, record **C.uchar) C.int {
 			return 0
 		}
 
-		size := C.int(len(buf))
-		*record = (*C.uchar)(C.malloc(C.size_t(len(buf))))
-		C.memcpy(unsafe.Pointer(*record), unsafe.Pointer(&buf[0]), C.size_t(len(buf)))
-		return size
+		*record = (*C.uchar)(unsafe.Pointer(&buf[0]))
+		return C.int(len(buf))
 	}
 
 	return -1
@@ -173,14 +171,6 @@ func release_object(h C.handle) {
 	default:
 		panic(o)
 	}
-}
-
-//export mem_free
-func mem_free(p unsafe.Pointer) {
-	// "free" may be a better name for this function, but doing so
-	// will cause calling any function of this library from Python
-	// ctypes hanging.
-	C.free(p)
 }
 
 func main() {} // Required but ignored
