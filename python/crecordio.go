@@ -45,8 +45,6 @@ func removeObject(handle C.handle) interface{} {
 	return r
 }
 
-var nullPtr = unsafe.Pointer(uintptr(0))
-
 type writer struct {
 	w *recordio.Writer
 	f *os.File
@@ -143,7 +141,7 @@ func recordio_read(h C.handle, record **C.uchar) C.int {
 	if r.s.Scan() {
 		buf := r.s.Record()
 		if len(buf) == 0 {
-			*record = (*C.uchar)(nullPtr)
+			*record = (*C.uchar)(nil)
 			return 0
 		}
 
