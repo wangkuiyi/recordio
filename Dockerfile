@@ -6,8 +6,4 @@ RUN curl --silent https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz go.tar.gz
 ENV PATH=/usr/local/go/bin:$PATH
 
 RUN pip install --upgrade pip
-
-RUN echo "#!/bin/bash" > /build.bash
-RUN echo "cd /work/python; pip wheel ." >> /build.bash
-RUN chmod +x /build.bash
-CMD ["/build.bash"]
+RUN pip install setuptools-golang pytest-runner pytest
