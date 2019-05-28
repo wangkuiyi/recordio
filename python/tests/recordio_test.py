@@ -79,7 +79,7 @@ class TestAll(unittest.TestCase):
 
     def test_utf8_values(self):
         # filename can be in UTF-8
-        path = "/tmp/文件.recordio"
+        path = "/tmp/ファイル.recordio"
         w = recordio.Writer(path)
         # UTF-8 characters need to be encoded explicitly.
         w.write("你好世界".encode())
