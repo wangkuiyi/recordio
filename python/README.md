@@ -16,6 +16,10 @@ class Index(object):
       """Returns total number of records in the file."""
       ...
 
+   def close(self):
+      """Closes the index"""
+      ...
+
 class Scanner(objec):
    def __init__(self, path, start=0, len=-1, index=None):
       """Creates a scanner for the file. Use the index if provided."""
@@ -47,28 +51,28 @@ class Writer(object):
 
 To build this Python binding, we need Python 3 and the Go compiler.  If you don't want to install them locally, you can install them into a Docker image, and run the image to build the package.
 
-To build the Docker image, we can use the `/Dockerfile`.
+To build the Docker image, we can use the [`/Dockerfile`](/Dockerfile).
 
 ```bash
 docker build -t recordio:dev .
 ```
 
-To build the wheel package `/python/pyrecordio-*.whl` using the Docker image, run the following command:
+To start a Docker container, run the following command:
 
 ```bash
-docker run --rm -it -v $PWD:/work recordio:dev
+docker run --rm -it -v $PWD:/work -w /work recordio:dev
 ```
 
 ## Test
 
-First install the wheel package locally:
+Run the following command in `python` directory:
 
 ```
-pip install -I pyrecordio-<version>-<os>.whl
+python setup.py -vvv test
 ```
-
-Then run the tests:
+Or use the Docker image:
 
 ```
-python recordio/tests/recordio_test.py
+docker run -it --rm -v $PWD:/work -w /work recordio:dev \
+    bash -c "cd python && python setup.py -vvv test"
 ```
