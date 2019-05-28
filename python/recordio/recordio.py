@@ -4,7 +4,7 @@ import os
 from distutils.sysconfig import get_config_var
 
 path = os.path.join(
-    os.path.dirname(__file__), "librecordio" + get_config_var("SO")
+    os.path.dirname(__file__), "librecordio" + get_config_var("EXT_SUFFIX")
 )
 lib = ctypes.cdll.LoadLibrary(path)
 
