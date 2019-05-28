@@ -1,6 +1,5 @@
 import ctypes
 import os
-import six
 
 from distutils.sysconfig import get_config_var
 
@@ -9,17 +8,12 @@ path = os.path.join(
 )
 lib = ctypes.cdll.LoadLibrary(path)
 
-
-def _convert_to_bytes(obj):
-    if isinstance(obj, six.text_type):
-        return obj.encode()
-    elif isinstance(obj, six.binary_type):
-        return obj
-    elif obj is None:
-        return obj
-    else:
-        return six.b(obj)
-
+def _convert_to_bytes(path):
+    """Convert path to raw bytes"""
+    path_bytes = path.encode()
+    if not isinstance(path_bytes, bytes):
+        raise ValueError("Cannot convert to bytes: " + path)
+    return path_bytes
 
 class Writer(object):
     """
@@ -36,8 +30,11 @@ class Writer(object):
         self._w = None
 
     def write(self, record):
+        if not isinstance(record, bytes):
+            raise ValueError("record is not a bytes type, got: " + str(type(record)))
+
         lib.recordio_write(
-            self._w, ctypes.c_char_p(_convert_to_bytes(record)), len(record)
+            self._w, ctypes.c_char_p(record), len(record)
         )
 
 
