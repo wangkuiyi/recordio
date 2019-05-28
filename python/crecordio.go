@@ -85,10 +85,8 @@ func recordio_write(h C.handle, buf *C.uchar, size C.int) C.int {
 	// then dump the slice to disk. At which point the C buffer is
 	// no longer valid.
 	b := make([]byte, int(size))
-	for i := 0; i < int(size); i++ {
-		ptr := (*C.uchar)(unsafe.Pointer(uintptr(unsafe.Pointer(buf)) + uintptr(i)))
-		b[i] = byte(*ptr)
-	}
+	src := C.GoBytes(unsafe.Pointer(buf), size)
+	copy(b, src)
 
 	c, err := w.w.Write(b)
 	if err != nil {
