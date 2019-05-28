@@ -101,6 +101,4 @@ class Scanner(object):
         p2 = ctypes.cast(p, ctypes.POINTER(ctypes.c_char))
         record = p2[:size]
 
-        # memory created from C should be freed.
-        lib.mem_free(ret.contents)
         return record
