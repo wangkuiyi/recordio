@@ -77,6 +77,35 @@ class TestAll(unittest.TestCase):
             recordio.Scanner("", index=idx)
         idx.close()
 
+    def test_utf8_values(self):
+        # filename can be in UTF-8
+        path = "/tmp/文件.recordio"
+        w = recordio.Writer(path)
+        # UTF-8 characters need to be encoded explicitly.
+        w.write("蚂蚁".encode())
+        # Ascii string need call encode too.
+        w.write("Ant".encode())
+        # Ascii can be directly passed as bytes literal.
+        w.write(b"Fin")
+
+        # Non-encoded string will be rejected.
+        with self.assertRaises(ValueError):
+            w.write("蚂蚁")
+        with self.assertRaises(ValueError):
+            w.write("Ant")
+        w.close()
+
+        idx = recordio.Index(path)
+        self.assertEqual(3, idx.num_records())
+
+        r = recordio.Scanner(path, index=idx)
+        self.assertEqual(r.record().decode(), "蚂蚁")
+        self.assertEqual(r.record().decode(), "Ant")
+        self.assertEqual(r.record().decode(), "Fin")
+        self.assertEqual(r.record(), None)
+        r.close()
+        idx.close()
+
 
 if __name__ == "__main__":
     unittest.main()
