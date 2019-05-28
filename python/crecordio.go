@@ -145,7 +145,7 @@ func recordio_read(h C.handle, record **C.uchar) C.int {
 			return 0
 		}
 
-		*record = (*C.uchar)(unsafe.Pointer(&buf[0]))
+		*record = (*C.uchar)(&buf[0])
 		return C.int(len(buf))
 	}
 
