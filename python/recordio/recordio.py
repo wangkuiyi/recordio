@@ -28,6 +28,8 @@ class Writer(object):
 
     def __init__(self, path):
         self._w = lib.create_recordio_writer(_convert_to_bytes(path))
+        if self._w == -1:
+            raise RuntimeError("Failed to create recordio file: " + path)
 
     def close(self):
         lib.release_object(self._w)
@@ -46,6 +48,10 @@ class Index(object):
 
     def __init__(self, path):
         self._idx = lib.create_recordio_index(_convert_to_bytes(path))
+        if self._idx == -1:
+            raise RuntimeError(
+                "Failed to read index from recordio file: " + path
+            )
 
     def close(self):
         lib.release_object(self._idx)
@@ -71,6 +77,11 @@ class Scanner(object):
         self._r = lib.create_recordio_reader(
             _convert_to_bytes(path), self._idx._idx, start, len
         )
+
+        if self._r == -1:
+            raise RuntimeError(
+                "Failed to create scanner for recordio file: " + path
+            )
 
     def close(self):
         if self._own_idx:
