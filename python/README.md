@@ -51,7 +51,7 @@ class Writer(object):
 
 To build this Python binding, we need Python 3 and the Go compiler.  If you don't want to install them locally, you can install them into a Docker image, and run the image to build the package.
 
-To build the Docker image, we can use the [`/Dockerfile`](../Dockerfile).
+To build the Docker image, we can use the [`/Dockerfile`](/Dockerfile).
 
 ```bash
 docker build -t recordio:dev .
