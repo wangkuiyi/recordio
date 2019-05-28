@@ -83,7 +83,7 @@ class TestAll(unittest.TestCase):
         w = recordio.Writer(path)
         # UTF-8 characters need to be encoded explicitly.
         w.write("你好世界".encode())
-        w.write(b"שלום בעולם".encode())
+        w.write("שלום בעולם".encode())
         # ASCII characters don't need encoding.
         w.write(b"Hello world")     
 
