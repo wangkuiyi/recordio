@@ -10,6 +10,19 @@ matrix:
       - cd python
       - python setup.py -q test
 
+      deploy:
+        provider: pypi
+        user: elasticdl
+        password:
+          # secure token: `echo -n "password" | travis encrypt --add deploy.password -r wangkuiyi/recordio`
+          secure: usFFgADH9aR2zAOt9OvQ0jLzBmZuPXA6VH4vFgtnGWbYOy6tbbMC6a64ZueCmLrD51MRfE+YKdCyhWifyHyC+Swva7pX4Ys/K5sScpQuCl+YyYIOG1Td4TIFj8feUBMlsxvUrqW15YLhZz5nvg2TmfuA+PyyGYzsfTINpwK4bfrF227pbDTwFaKWW8+C2Bbz2dM1exA9KYAmVKxalVStLyg+61D6dq0U6uuiBTlE8hahbqr9qogpQHIAqxD1yfOSKa7swZvmePF0lHjcKwiXaesKj9RTIguGo3pCprsBVMia1J/6UVfpcQl18oHaodDEup5Bm/sXQPnvTKF4icEQ3J1u9hlRNTVMwhiwsbIeDlTLrzRn+Ngrthkq/eESFkGN9OSRzlr7L4F1OXGrLntsiY3fg20J444sbICi/Rn1RqAsMuzPSZgsQsnQiytgG6PeaafTR8GnU12REXlPOppNu8ylWNaqul/eNiMZDo+7Zwm3m1qEV0fvZFjoYCbgsoUZZDGGyhVg+Eraf6ME7JqA4hHDOc2e+RMv4EC/3RdPYibrh3WaggGmfKEG105xatIMt9lygXD0b3ci6s92OTWXxPbmBUIzajWx6iCtad4ABECPGC1aCDVHkrPYa2dPPd7HZ5tOKvePATayq0iSxgEt1m7zxUH2J9FhjvcghZJnEHM=
+        distributions: sdist bdist_wheel
+        skip_existing: true
+        skip_cleanup: true
+        on:
+          tags: true
+          repo: wangkuyi/recordio
+
     - language: python
       python: 3.6
 
