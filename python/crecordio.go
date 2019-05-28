@@ -79,14 +79,12 @@ func create_recordio_writer(path *C.char) C.handle {
 func recordio_write(h C.handle, buf *C.uchar, size C.int) C.int {
 	w := getObject(h).(writer)
 
-	// Make a copy of the C buffer rather than create a slice
+	// Bobytes makes a copy of the C buffer rather than create a slice
 	// backed by the C buffer. This is because RecordIO caches the
 	// slice in memory until the max chunk size is reached and
 	// then dump the slice to disk. At which point the C buffer is
 	// no longer valid.
-	b := make([]byte, int(size))
-	src := C.GoBytes(unsafe.Pointer(buf), size)
-	copy(b, src)
+	b := C.GoBytes(unsafe.Pointer(buf), size)
 
 	c, err := w.w.Write(b)
 	if err != nil {
