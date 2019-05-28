@@ -6,16 +6,17 @@ RecordIO is a file format created for [PaddlePaddle Elastic Deep Learning](https
 
 ## Motivations
 
-In distributed computing, we often need to dispatch tasks to worker processes.  Usually, a task is defined as a parition of the input data, like what MapReduce and distributed machine learning do.
+### Static Sharding v.s. Dynamic Sharding
 
-Most distributed filesystems, including HDFS, Google FS, and CephFS, prefer a small number of big files.  Therefore, it is impratical to create each task as a small file; instead, we need a format for big files that is
+In distributed computing, we often need to partition and dispatch data to worker processes.  A commonly-used solution, known as *static sharding*, is to define each data *shard* as a file and to map each file to a worker process.  However, when we are doing fault-tolerant distributed computing or elastic scheduling of distributed computing jobs, the total number of worker processes might change at runtime, and static sharding doesn't work.  In such cases, we want to partition records in a file into data shards -- an approach known as *dynamic sharding*.
 
-1. appenable, so that applications can append records to the file without updating the meta-data, thus fault tolerable,
-1. partitionable, so that applications can quickly scan over the file to count the total number of records, and create tasks each corresponds to a sequence of records.
+### ReocrdIO and Dynamic Sharding
 
-RecordIO is such a file format.
+We define RecordIO file format to support dynamic sharding.  A RecordIO file consists of a sequence of records grouped by chunks.  We could build an index of records by reading through a file quickly while skipping over chunks.  We then use this index data structure to seek to the beginning of any record.  In this way, we can locate any dynamic shard efficiently.
 
-## Write
+## The Go API
+
+### Writing
 
 ```go
 f, _ := os.Create("a_file.recordio")
@@ -27,7 +28,7 @@ w.Close()
 f.Close()
 ```
 
-## Read
+## Reading
 
 1. Load chunk index:
 
@@ -51,43 +52,6 @@ f.Close()
    f.Close()
    ```
 
-## Python Wrapper
+## The Python Binding
 
-Python wrapper exposes three classes `Index`, `Writer` and `Scanner`. The interfaces are defined as following:
-
-```python
-class Index(object):
-   def __init__(self, path):
-      """Loads index from file"""
-      ...
-   
-   def num_records(self):
-      """Returns total number of records in the file."""
-      ...
-
-class Scanner(objec):
-   def __init__(self, path, start=0, len=-1, index=None):
-      """Creates a scanner for the file. Use the index if provided."""
-      ...
-   
-   def record(self):
-      """Returns the current record. Returns None if the end is reached"""
-      ...
-
-   def close(self):
-      """Closes the scanner"""
-      ...
-
-class Writer(object):
-   def __init__(self, path):
-      """Creates a writer"""
-      ...
-
-   def write(self, record):
-      """Writes the record to file"""
-      ...
-
-   def close(self):
-      """Closes the writer"""
-      ...
-```
+We provide a Python binding of the Go implementation.  For more information please refer to [`python/README.md`](python/README.md).

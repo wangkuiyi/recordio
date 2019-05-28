@@ -6,11 +6,8 @@ matrix:
 
       cache: pip
 
-      install: 
-      - cd python
-      - python setup.py -q install
-
       script:
+      - cd python
       - python setup.py -q test
 
     - language: python
@@ -18,11 +15,8 @@ matrix:
 
       cache: pip
 
-      install: 
-      - cd python
-      - python setup.py -q install
-
       script:
+      - cd python
       - python setup.py -q test
 
     - language: python
@@ -30,10 +24,7 @@ matrix:
 
       cache: pip
 
-      install: 
-      - cd python
-      - python setup.py -q install
-
       script:
+      - cd python
       - python setup.py -q test
     - language: go
