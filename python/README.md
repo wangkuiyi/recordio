@@ -53,7 +53,7 @@ To build the Docker image, we can use the `/Dockerfile`.
 docker build -t recordio:dev .
 ```
 
-To build the package using the Docker image, run the following command:
+To build the wheel package `/python/pyrecordio-*.whl` using the Docker image, run the following command:
 
 ```bash
 docker run --rm -it -v $PWD:/work recordio:dev
