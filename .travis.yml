@@ -29,7 +29,7 @@ matrix:
         skip_cleanup: true
         on:
           tags: true
-          repo: wangkuyi/recordio
+          repo: wangkuiyi/recordio
 
     - language: python
       python: 3.6
