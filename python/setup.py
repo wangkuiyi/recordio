@@ -3,7 +3,7 @@ from setuptools import setup, Extension, find_packages
 
 setup(
     name="pyrecordio",
-    version="0.0.6",
+    version="0.0.7",
     description="recordio file format support",
     url="https://github.com/wangkuiyi/recordio",
     license="Apache 2.0",
