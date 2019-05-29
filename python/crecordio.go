@@ -45,8 +45,6 @@ func removeObject(handle C.handle) interface{} {
 	return r
 }
 
-var nullPtr = unsafe.Pointer(uintptr(0))
-
 type writer struct {
 	w *recordio.Writer
 	f *os.File
@@ -79,16 +77,12 @@ func create_recordio_writer(path *C.char) C.handle {
 func recordio_write(h C.handle, buf *C.uchar, size C.int) C.int {
 	w := getObject(h).(writer)
 
-	// Make a copy of the C buffer rather than create a slice
-	// backed by the C buffer. This is because RecordIO caches the
-	// slice in memory until the max chunk size is reached and
-	// then dump the slice to disk. At which point the C buffer is
-	// no longer valid.
-	b := make([]byte, int(size))
-	for i := 0; i < int(size); i++ {
-		ptr := (*C.uchar)(unsafe.Pointer(uintptr(unsafe.Pointer(buf)) + uintptr(i)))
-		b[i] = byte(*ptr)
-	}
+	// Gobytes makes a copy of the C buffer rather than creates a slice
+	// backed by the C buffer. We need this because RecordIO caches the
+	// slice in memory until the max chunk size is reached and then
+	// dump the slice to disk. At which point the C buffer is no longer
+	// valid.
+	b := C.GoBytes(unsafe.Pointer(buf), size)
 
 	c, err := w.w.Write(b)
 	if err != nil {
@@ -147,11 +141,11 @@ func recordio_read(h C.handle, record **C.uchar) C.int {
 	if r.s.Scan() {
 		buf := r.s.Record()
 		if len(buf) == 0 {
-			*record = (*C.uchar)(nullPtr)
+			*record = (*C.uchar)(nil)
 			return 0
 		}
 
-		*record = (*C.uchar)(unsafe.Pointer(&buf[0]))
+		*record = (*C.uchar)(&buf[0])
 		return C.int(len(buf))
 	}
 
