@@ -60,7 +60,7 @@ docker build -t recordio:dev .
 To start a Docker container, run the following command:
 
 ```bash
-docker run --rm -it -v $PWD:/work -w /work recordio:dev
+docker run --rm -it -v $PWD:/work -w /work recordio:dev /bin/bash
 ```
 
 ## Test
@@ -76,3 +76,13 @@ Or use the Docker image:
 docker run -it --rm -v $PWD:/work -w /work recordio:dev \
     bash -c "cd python && python setup.py -vvv test"
 ```
+
+## Build Pip Packages
+
+In Docker container, run the following command to build python package:
+
+```bash
+python setup.py bdist_wheel
+```
+
+The package then can be found in `dist/` directory.

@@ -1,4 +1,5 @@
-FROM python:3.5
+ARG PY_VER=3.6
+FROM python:${PY_VER}
 
 RUN apt-get update
 RUN apt-get install -y curl
