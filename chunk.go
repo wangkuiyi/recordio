@@ -1,6 +1,7 @@
 package recordio
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
@@ -109,14 +110,15 @@ func compressData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
 
 // parse the specified chunk from r.
 func parseChunk(r io.ReadSeeker, chunkOffset int64) (*chunk, error) {
-	var e error
-	var hdr *header
-
-	if _, e = r.Seek(chunkOffset, io.SeekStart); e != nil {
+	if _, e := r.Seek(chunkOffset, io.SeekStart); e != nil {
 		return nil, fmt.Errorf("Failed to seek chunk: %v", e)
 	}
 
-	hdr, e = parseHeader(r)
+	return loadChunk(bufio.NewReader(r))
+}
+
+func loadChunk(r io.Reader) (*chunk, error) {
+	hdr, e := parseHeader(r)
 	if e != nil {
 		return nil, fmt.Errorf("Failed to parse chunk header: %v", e)
 	}

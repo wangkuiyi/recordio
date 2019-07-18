@@ -1,7 +1,11 @@
 package recordio_test
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
@@ -41,4 +45,59 @@ func TestWriteRead(t *testing.T) {
 	if i != total {
 		t.Fatal("total count not match:", i, total)
 	}
+}
+
+func BenchmarkRead(b *testing.B) {
+	const (
+		records   = 200
+		rangeSize = 50
+	)
+
+	fn, e := synthesizeTempFile(records)
+	if e != nil {
+		b.Fatalf("Cannot synthesize RecordIO file for benchmarking: %v", e)
+	}
+	defer os.Remove(fn)
+
+	f, e := os.Open(fn)
+	if e != nil {
+		b.Fatalf("Cannot open synthesized file %s: %v", fn, e)
+	}
+
+	idx, e := recordio.LoadIndex(f)
+	if e != nil {
+		b.Fatalf("Failed indexing synthesized file %s: %v", fn, e)
+	}
+
+	for s := 0; s < records-rangeSize; s += rangeSize {
+		b.Run(fmt.Sprintf("reading records %05d to %05d", s, s+rangeSize),
+			func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					scnr := recordio.NewScanner(f, idx, s, s+2*rangeSize)
+					for scnr.Scan() {
+						scnr.Record()
+					}
+				}
+			})
+	}
+}
+
+func synthesizeTempFile(records int) (fn string, e error) {
+	f, e := ioutil.TempFile("", "benchmark-recordio")
+	fn = f.Name()
+	if e != nil {
+		return "", e
+	}
+
+	w := recordio.NewWriter(bufio.NewWriter(f), 0, -1)
+	rcd := make([]byte, 2*1024*1024)
+	for i := 0; i < records; i++ {
+		_, e = w.Write(rcd)
+		if e != nil {
+			return "", e
+		}
+	}
+	w.Close()
+
+	return fn, nil
 }
