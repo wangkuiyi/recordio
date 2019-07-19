@@ -1,7 +1,6 @@
 package recordio
 
 import (
-	"bufio"
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
@@ -114,10 +113,6 @@ func parseChunk(r io.ReadSeeker, chunkOffset int64) (*chunk, error) {
 		return nil, fmt.Errorf("Failed to seek chunk: %v", e)
 	}
 
-	return loadChunk(bufio.NewReader(r))
-}
-
-func loadChunk(r io.Reader) (*chunk, error) {
 	hdr, e := parseHeader(r)
 	if e != nil {
 		return nil, fmt.Errorf("Failed to parse chunk header: %v", e)
