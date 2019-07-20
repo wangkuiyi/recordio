@@ -1,19 +1,23 @@
 package recordio
 
-import "io"
+import (
+	"io"
+	"sort"
+)
 
 // Index consists offsets and sizes of the consequetive chunks in a RecordIO file.
 type Index struct {
-	chunkOffsets []int64
-	chunkLens    []uint32
-	numRecords   int   // the number of all records in a file.
-	chunkRecords []int // the number of records in chunks.
+	chunkOffsets   []int64
+	accumChunkLens []int // accumulative chunk sizes for binary search.
+	numRecords     int   // the number of all records in a file.
+	chunkRecords   []int // the number of records in chunks.
 }
 
 // LoadIndex scans the file and parse chunkOffsets, chunkLens, and len.
 func LoadIndex(r io.ReadSeeker) (*Index, error) {
 	f := &Index{}
 	offset := int64(0)
+	accum := 0
 	var e error
 	var hdr *header
 
@@ -24,7 +28,8 @@ func LoadIndex(r io.ReadSeeker) (*Index, error) {
 		}
 
 		f.chunkOffsets = append(f.chunkOffsets, offset)
-		f.chunkLens = append(f.chunkLens, hdr.numRecords)
+		accum += int(hdr.numRecords)
+		f.accumChunkLens = append(f.accumChunkLens, accum)
 		f.chunkRecords = append(f.chunkRecords, int(hdr.numRecords))
 		f.numRecords += int(hdr.numRecords)
 
@@ -47,21 +52,25 @@ func (r *Index) NumRecords() int {
 
 // NumChunks returns the total number of chunks in a RecordIO file.
 func (r *Index) NumChunks() int {
-	return len(r.chunkLens)
+	return len(r.accumChunkLens)
 }
 
 // Locate returns the index of chunk that contains the given record,
 // and the record index within the chunk.  It returns (-1, -1) if the
 // record is out of range.
 func (r *Index) Locate(recordIndex int) (int, int) {
-	sum := 0
-	for i, l := range r.chunkLens {
-		sum += int(l)
-		if recordIndex < sum {
-			return i, recordIndex - sum + int(l)
-		}
+	chunk := sort.Search(len(r.accumChunkLens), func(i int) bool {
+		return recordIndex < r.accumChunkLens[i]
+	})
+	if chunk >= r.NumChunks() {
+		return -1, -1
 	}
-	return -1, -1
+
+	prevAccum := 0
+	if chunk > 0 {
+		prevAccum = r.accumChunkLens[chunk-1]
+	}
+	return chunk, recordIndex - prevAccum
 }
 
 // Scanner scans records in a specified range within [0, numRecords).

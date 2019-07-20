@@ -58,7 +58,7 @@ func TestWriteAndRead(t *testing.T) {
 
 	idx, e := LoadIndex(bytes.NewReader(buf.Bytes()))
 	assert.Nil(e)
-	assert.Equal([]uint32{2, 1}, idx.chunkLens)
+	assert.Equal([]int{2, 3}, idx.accumChunkLens)
 	assert.Equal(
 		[]int64{0,
 			int64(4 + // magic number
