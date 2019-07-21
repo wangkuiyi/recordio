@@ -20,6 +20,7 @@ const (
 
 	magicNumber       uint32 = 0x01020304
 	defaultCompressor        = Snappy
+	headerSize               = 20 // sizeof(struct header + magic number)
 )
 
 // header is the metadata of Chunk.
@@ -31,7 +32,7 @@ type header struct {
 }
 
 func (c *header) write(w io.Writer) (int, error) {
-	var buf [20]byte
+	var buf [headerSize]byte
 	binary.LittleEndian.PutUint32(buf[0:4], magicNumber)
 	binary.LittleEndian.PutUint32(buf[4:8], c.checkSum)
 	binary.LittleEndian.PutUint32(buf[8:12], c.compressor)
@@ -41,7 +42,7 @@ func (c *header) write(w io.Writer) (int, error) {
 }
 
 func parseHeader(r io.Reader) (*header, error) {
-	var buf [20]byte
+	var buf [headerSize]byte
 	if _, e := r.Read(buf[:]); e != nil {
 		return nil, e
 	}
