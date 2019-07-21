@@ -132,12 +132,12 @@ func parseChunk(r io.ReadSeeker, chunkOffset int64) (*chunk, error) {
 	// ▶(tee)>
 	//   ▶      : io.TeeReader takes a reader and a writer and returns a branch
 	//
-	// The constructed pipeline looks like the following:
+	// The decompressing and checksum pipeline looks as follows:
 	//
 	// (file)▶-copy->(pipe)▶(tee)>(crc32)
-	//                        ▶(decomp)▶-copy->(deflated)
+	//                        ▶(decomp)▶-copy->(buf)
 	//
-	var decompressed bytes.Buffer
+	var buf bytes.Buffer
 	pr, pw := io.Pipe()
 	chksum := crc32.NewIEEE()
 	br := io.TeeReader(pr, chksum)
@@ -152,7 +152,7 @@ func parseChunk(r io.ReadSeeker, chunkOffset int64) (*chunk, error) {
 		_, e1 = io.CopyN(pw, r, int64(hdr.compressedSize))
 		pw.Close() // End the streaming.
 	}()
-	_, e = io.Copy(&decompressed, dflt)
+	_, e = io.Copy(&buf, dflt)
 
 	if e1 != nil {
 		return nil, e1
@@ -160,22 +160,20 @@ func parseChunk(r io.ReadSeeker, chunkOffset int64) (*chunk, error) {
 	if e != nil {
 		return nil, e
 	}
-
-	// Checksum the running of the pipeline.
 	if hdr.checkSum != chksum.Sum32() {
 		return nil, fmt.Errorf("Checksum checking failed.")
 	}
 
-	// Parse the decompressed chunk.
+	// Parse the chunk from buf.
 	ch := &chunk{}
 	for i := 0; i < int(hdr.numRecords); i++ {
 		var rs [4]byte
-		if _, e = decompressed.Read(rs[:]); e != nil {
+		if _, e = buf.Read(rs[:]); e != nil {
 			return nil, fmt.Errorf("Failed to read record length: %v", e)
 		}
 
 		r := make([]byte, binary.LittleEndian.Uint32(rs[:]))
-		if _, e = decompressed.Read(r); e != nil {
+		if _, e = buf.Read(r); e != nil {
 			return nil, fmt.Errorf("Failed to read a record: %v", e)
 		}
 
