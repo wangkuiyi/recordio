@@ -25,7 +25,7 @@ func (ch *chunk) add(record []byte) {
 
 // dump the chunk into w, and clears the chunk and makes it ready for
 // the next add invocation.
-func (ch *chunk) dump(w io.Writer, compressorIndex int) error {
+func (ch *chunk) dump(w io.Writer, compressorID int) error {
 	// NOTE: don't check ch.numBytes instead, because empty
 	// records are allowed.
 	if len(ch.records) == 0 {
@@ -33,30 +33,26 @@ func (ch *chunk) dump(w io.Writer, compressorIndex int) error {
 	}
 
 	// Write raw records and their lengths into data buffer.
-	var data bytes.Buffer
-
+	var compressed bytes.Buffer
+	cw := newCompressor(&compressed, compressorID)
 	for _, r := range ch.records {
 		var rs [4]byte
 		binary.LittleEndian.PutUint32(rs[:], uint32(len(r)))
 
-		if _, e := data.Write(rs[:]); e != nil {
+		if _, e := cw.Write(rs[:]); e != nil {
 			return fmt.Errorf("Failed to write record length: %v", e)
 		}
 
-		if _, e := data.Write(r); e != nil {
+		if _, e := cw.Write(r); e != nil {
 			return fmt.Errorf("Failed to write record: %v", e)
 		}
 	}
-
-	compressed, e := compressData(&data, compressorIndex)
-	if e != nil {
-		return e
-	}
+	cw.Close()
 
 	// Write chunk header and compressed data.
 	hdr := &header{
 		checkSum:       crc32.ChecksumIEEE(compressed.Bytes()),
-		compressor:     uint32(compressorIndex),
+		compressor:     uint32(compressorID),
 		compressedSize: uint32(compressed.Len()),
 		numRecords:     uint32(len(ch.records)),
 	}
@@ -84,27 +80,16 @@ func (c *noopCompressor) Close() error {
 	return nil
 }
 
-func compressData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
-	compressed := new(bytes.Buffer)
-	var compressor io.WriteCloser
-
-	switch compressorIndex {
+func newCompressor(compressed *bytes.Buffer, compressorID int) io.WriteCloser {
+	switch compressorID {
 	case NoCompression:
-		compressor = &noopCompressor{compressed}
+		return &noopCompressor{compressed}
 	case Snappy:
-		compressor = snappy.NewBufferedWriter(compressed)
+		return snappy.NewBufferedWriter(compressed)
 	case Gzip:
-		compressor = gzip.NewWriter(compressed)
-	default:
-		return nil, fmt.Errorf("Unknown compression algorithm: %d", compressorIndex)
+		return gzip.NewWriter(compressed)
 	}
-
-	if _, e := io.Copy(compressor, src); e != nil {
-		return nil, fmt.Errorf("Failed to compress chunk data: %v", e)
-	}
-	compressor.Close()
-
-	return compressed, nil
+	return nil
 }
 
 // parse the specified chunk from r.
