@@ -118,29 +118,64 @@ func parseChunk(r io.ReadSeeker, chunkOffset int64) (*chunk, error) {
 		return nil, fmt.Errorf("Failed to parse chunk header: %v", e)
 	}
 
-	var buf bytes.Buffer
-	if _, e = io.CopyN(&buf, r, int64(hdr.compressedSize)); e != nil {
-		return nil, fmt.Errorf("Failed to read chunk data: %v", e)
-	}
-
-	if hdr.checkSum != crc32.ChecksumIEEE(buf.Bytes()) {
-		return nil, fmt.Errorf("Checksum checking failed.")
-	}
-
-	deflated, e := deflateData(&buf, int(hdr.compressor))
+	// To help designing a complex I/O pipeline using Go's io
+	// package, let us introduce the following notations:
+	//
+	// ▶ : a reader
+	// > : a writer
+	// (file)▶ : an opened file is a reader
+	// >(crc32) : a CRC32 hash is a writer
+	// >(buf): a bytes.Buffer is a writer
+	// (file)▶-copy->(buf) : io.Copy copies content from a file to a buffer
+	// ▶(decomp)▶ : a decompressor wraps a reader into another reader
+	// >(pipe)▶ : io.Pipe returns a pair of reader and writer
+	// ▶(tee)>
+	//   ▶      : io.TeeReader takes a reader and a writer and returns a branch
+	//
+	// The constructed pipeline looks like the following:
+	//
+	// (file)▶-copy->(pipe)▶(tee)>(crc32)
+	//                        ▶(decomp)▶-copy->(deflated)
+	//
+	var decompressed bytes.Buffer
+	pr, pw := io.Pipe()
+	chksum := crc32.NewIEEE()
+	br := io.TeeReader(pr, chksum)
+	dflt, e := newDecompressor(br, int(hdr.compressor))
 	if e != nil {
 		return nil, e
 	}
 
+	// Run the pipeline.
+	var e1 error
+	go func() {
+		_, e1 = io.CopyN(pw, r, int64(hdr.compressedSize))
+		pw.Close() // End the streaming.
+	}()
+	_, e = io.Copy(&decompressed, dflt)
+
+	if e1 != nil {
+		return nil, e1
+	}
+	if e != nil {
+		return nil, e
+	}
+
+	// Checksum the running of the pipeline.
+	if hdr.checkSum != chksum.Sum32() {
+		return nil, fmt.Errorf("Checksum checking failed.")
+	}
+
+	// Parse the decompressed chunk.
 	ch := &chunk{}
 	for i := 0; i < int(hdr.numRecords); i++ {
 		var rs [4]byte
-		if _, e = deflated.Read(rs[:]); e != nil {
+		if _, e = decompressed.Read(rs[:]); e != nil {
 			return nil, fmt.Errorf("Failed to read record length: %v", e)
 		}
 
 		r := make([]byte, binary.LittleEndian.Uint32(rs[:]))
-		if _, e = deflated.Read(r); e != nil {
+		if _, e = decompressed.Read(r); e != nil {
 			return nil, fmt.Errorf("Failed to read a record: %v", e)
 		}
 
@@ -151,28 +186,14 @@ func parseChunk(r io.ReadSeeker, chunkOffset int64) (*chunk, error) {
 	return ch, nil
 }
 
-func deflateData(src io.Reader, compressorIndex int) (*bytes.Buffer, error) {
-	var e error
-	var deflator io.Reader
-
-	switch compressorIndex {
+func newDecompressor(src io.Reader, compressorID int) (io.Reader, error) {
+	switch compressorID {
 	case NoCompression:
-		deflator = src
+		return src, nil
 	case Snappy:
-		deflator = snappy.NewReader(src)
+		return snappy.NewReader(src), nil
 	case Gzip:
-		deflator, e = gzip.NewReader(src)
-		if e != nil {
-			return nil, fmt.Errorf("Failed to create gzip reader: %v", e)
-		}
-	default:
-		return nil, fmt.Errorf("Unknown compression algorithm: %d", compressorIndex)
+		return gzip.NewReader(src)
 	}
-
-	deflated := new(bytes.Buffer)
-	if _, e = io.Copy(deflated, deflator); e != nil {
-		return nil, fmt.Errorf("Failed to deflate chunk data: %v", e)
-	}
-
-	return deflated, nil
+	return nil, fmt.Errorf("Unknown compression algorithm: %d", compressorID)
 }
