@@ -85,7 +85,7 @@ func newCompressor(compressed *bytes.Buffer, compressorID int) io.WriteCloser {
 	case NoCompression:
 		return &noopCompressor{compressed}
 	case Snappy:
-		return snappy.NewBufferedWriter(compressed)
+		return snappy.NewWriter(compressed)
 	case Gzip:
 		return gzip.NewWriter(compressed)
 	}
