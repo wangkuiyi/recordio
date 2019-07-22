@@ -8,7 +8,7 @@ import (
 )
 
 func TestWriteAndReadHead(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	c := &header{
 		checkSum:       123,
@@ -18,9 +18,9 @@ func TestWriteAndReadHead(t *testing.T) {
 
 	var buf bytes.Buffer
 	_, e := c.write(&buf)
-	assert.Nil(e)
+	a.Nil(e)
 
 	cc, e := parseHeader(&buf)
-	assert.Nil(e)
-	assert.Equal(c, cc)
+	a.Nil(e)
+	a.Equal(c, cc)
 }
