@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/wangkuiyi/recordio"
 )
 
@@ -45,6 +47,46 @@ func TestWriteRead(t *testing.T) {
 	if i != total {
 		t.Fatal("total count not match:", i, total)
 	}
+}
+
+func TestWriteAndReadBigRecords(t *testing.T) {
+	a := assert.New(t)
+
+	f, e := ioutil.TempFile("", "recordio-test")
+	a.NoError(e)
+	defer os.Remove(f.Name())
+
+	r := make([]byte, 4*1024*1024)
+	for i := range r {
+		r[i] = byte('A' + i%26)
+	}
+
+	w := recordio.NewWriter(f, -1, recordio.NoCompression)
+	total := 10
+	for i := 0; i < total; i++ {
+		l, e := w.Write(r)
+		a.Equal(len(r), l)
+		a.NoError(e)
+	}
+	a.NoError(w.Close()) // closes f.
+
+	f, e = os.Open(f.Name())
+	a.NoError(e)
+	idx, e := recordio.LoadIndex(f)
+	a.NoError(e)
+	a.NoError(f.Close())
+	a.Equal(total, idx.NumRecords())
+
+	f, e = os.Open(f.Name())
+	a.NoError(e)
+	scnr := recordio.NewScanner(f, idx, -1, -1)
+	n := 0
+	for scnr.Scan() {
+		a.True(reflect.DeepEqual(r, scnr.Record()))
+		n++
+	}
+	a.Equal(io.EOF, scnr.Error())
+	a.Equal(total, n)
 }
 
 func BenchmarkRead(b *testing.B) {
