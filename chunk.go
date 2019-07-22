@@ -23,13 +23,42 @@ func (ch *chunk) add(record []byte) {
 	ch.numBytes += len(record)
 }
 
-func (ch *chunk) dump(w io.Writer, compressorID int) error {
-	// NOTE: don't check ch.numBytes instead, because empty
-	// records are allowed.
+// write a chunk, including the header and compressed chunk data.
+func (ch *chunk) write(w io.Writer, compressorID int) error {
+	// NOTE: don't check ch.numBytes as we allow empty records.
 	if len(ch.records) == 0 {
 		return nil
 	}
 
+	var buf bytes.Buffer
+	chksum, e := ch.compress(compressorID, &buf)
+	if e != nil {
+		return e
+	}
+
+	// Write chunk header and compressed data.
+	hdr := &header{
+		checkSum:       chksum,
+		compressor:     uint32(compressorID),
+		compressedSize: uint32(buf.Len()),
+		numRecords:     uint32(len(ch.records)),
+	}
+	if _, e := hdr.write(w); e != nil {
+		return fmt.Errorf("Failed to write chunk header: %v", e)
+	}
+	if _, e := w.Write(buf.Bytes()); e != nil {
+		return fmt.Errorf("Failed to write chunk data: %v", e)
+	}
+
+	// Clear the current chunk.
+	ch.records = nil
+	ch.numBytes = 0
+
+	return nil
+}
+
+// compress chunk data (records) into a buffer and returns the CRC32 checksum.
+func (ch *chunk) compress(compressorID int, buf *bytes.Buffer) (uint32, error) {
 	// In addition to notations introduced in the function
 	// definition parseChunk, we add the following:
 	//
@@ -45,7 +74,6 @@ func (ch *chunk) dump(w io.Writer, compressorID int) error {
 	compr := newCompressor(pw, compressorID)
 	chksum := crc32.NewIEEE()
 	br := io.TeeReader(pr, chksum)
-	var buf bytes.Buffer
 
 	// Write raw records and their lengths into data buffer.
 	var e1 error
@@ -70,63 +98,27 @@ func (ch *chunk) dump(w io.Writer, compressorID int) error {
 		}
 	}()
 
-	_, e := io.Copy(&buf, br)
+	_, e := io.Copy(buf, br)
 	if e != nil {
-		return e
+		return 0, e
 	}
-	if e1 != nil {
-		return e1
-	}
-
-	// Write chunk header and compressed data.
-	hdr := &header{
-		checkSum:       chksum.Sum32(),
-		compressor:     uint32(compressorID),
-		compressedSize: uint32(buf.Len()),
-		numRecords:     uint32(len(ch.records)),
-	}
-
-	if _, e := hdr.write(w); e != nil {
-		return fmt.Errorf("Failed to write chunk header: %v", e)
-	}
-
-	if _, e := w.Write(buf.Bytes()); e != nil {
-		return fmt.Errorf("Failed to write chunk data: %v", e)
-	}
-
-	// Clear the current chunk.
-	ch.records = nil
-	ch.numBytes = 0
-
-	return nil
+	return chksum.Sum32(), e1
 }
 
-type noopCompressor struct {
-	io.Writer
-}
-
-func (c *noopCompressor) Close() error {
-	return nil
-}
-
-func newCompressor(compressed io.WriteCloser, compressorID int) io.WriteCloser {
+func newCompressor(w io.WriteCloser, compressorID int) io.WriteCloser {
 	switch compressorID {
 	case NoCompression:
-		return &noopCompressor{compressed}
+		return w
 	case Snappy:
-		return snappy.NewWriter(compressed)
+		return snappy.NewWriter(w)
 	case Gzip:
-		return gzip.NewWriter(compressed)
+		return gzip.NewWriter(w)
 	}
 	return nil
 }
 
-// parseChunk reads and returns a chunk from r at the given offset.
-func parseChunk(r io.ReadSeeker, chunkOffset int64) (*chunk, error) {
-	if _, e := r.Seek(chunkOffset, io.SeekStart); e != nil {
-		return nil, fmt.Errorf("Failed to seek chunk: %v", e)
-	}
-
+// read a chunk from r at the given offset.
+func read(r io.Reader) (*chunk, error) {
 	hdr, e := parseHeader(r)
 	if e != nil {
 		return nil, fmt.Errorf("Failed to parse chunk header: %v", e)

@@ -47,7 +47,7 @@ func (w *Writer) Write(record []byte) (int, error) {
 	}
 
 	if w.chunk.numBytes+len(record) > w.maxChunkSize {
-		if e := w.chunk.dump(w.Writer, w.compressor); e != nil {
+		if e := w.chunk.write(w.Writer, w.compressor); e != nil {
 			return 0, e
 		}
 	}
@@ -58,7 +58,7 @@ func (w *Writer) Write(record []byte) (int, error) {
 
 // Close flushes the current chunk and makes the writer invalid.
 func (w *Writer) Close() error {
-	e := w.chunk.dump(w.Writer, w.compressor)
+	e := w.chunk.write(w.Writer, w.compressor)
 	w.Writer = nil
 	return e
 }

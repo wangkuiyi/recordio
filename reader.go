@@ -2,6 +2,7 @@ package recordio
 
 import (
 	"io"
+	"log"
 	"sort"
 )
 
@@ -115,7 +116,11 @@ func (s *Scanner) Scan() bool {
 	} else {
 		if ci, _ := s.index.Locate(s.cur); s.chunkIndex != ci {
 			s.chunkIndex = ci
-			s.chunk, s.err = parseChunk(s.reader, s.index.chunkOffsets[ci])
+			if _, e := s.reader.Seek(s.index.chunkOffsets[ci], io.SeekStart); e != nil {
+				log.Printf("Failed to seek chunk: %v", e)
+				return false
+			}
+			s.chunk, s.err = read(s.reader)
 		}
 	}
 
