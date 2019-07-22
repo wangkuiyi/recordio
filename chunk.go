@@ -166,9 +166,10 @@ func read(r io.Reader) (*chunk, error) {
 			return nil, fmt.Errorf("Failed to read record length: %v", e)
 		}
 
-		l := binary.LittleEndian.Uint32(rs[:])
+		l := int(binary.LittleEndian.Uint32(rs[:]))
 		r := make([]byte, l)
-		if _, e = decomp.Read(r); e != nil {
+		e := readNBytes(decomp, r)
+		if e != nil {
 			if !(e == io.EOF && l == 0 && i == int(hdr.numRecords)-1) {
 				// Read returns EOF if an "" is at the end of a chunk.
 				return nil, fmt.Errorf("Failed to read a record: %v", e)
@@ -187,6 +188,18 @@ func read(r io.Reader) (*chunk, error) {
 	}
 
 	return ch, nil
+}
+
+func readNBytes(r io.Reader, o []byte) error {
+	s := 0
+	for s < len(o) {
+		n, e := r.Read(o[s:])
+		if e != nil {
+			return e
+		}
+		s += n
+	}
+	return nil
 }
 
 func newDecompressor(src io.Reader, compressorID int) (io.Reader, error) {

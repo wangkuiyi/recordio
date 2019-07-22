@@ -58,7 +58,12 @@ func (w *Writer) Write(record []byte) (int, error) {
 
 // Close flushes the current chunk and makes the writer invalid.
 func (w *Writer) Close() error {
-	e := w.chunk.write(w.Writer, w.compressor)
-	w.Writer = nil
-	return e
+	defer func() { w.Writer = nil }()
+	if e := w.chunk.write(w.Writer, w.compressor); e != nil {
+		return e
+	}
+	if wc, ok := w.Writer.(io.WriteCloser); ok {
+		return wc.Close()
+	}
+	return nil
 }
