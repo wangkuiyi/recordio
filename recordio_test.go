@@ -1,4 +1,4 @@
-package recordio_test
+package recordio
 
 import (
 	"bufio"
@@ -9,42 +9,62 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/wangkuiyi/recordio"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestWriteRead(t *testing.T) {
+func TestWriteAndRead(t *testing.T) {
+	a := assert.New(t)
 	const total = 2000
+	writeAndReadRecords(a, total, NoCompression, true)
+	writeAndReadRecords(a, total, NoCompression, false)
+	writeAndReadRecords(a, total, Snappy, true)
+	writeAndReadRecords(a, total, Snappy, false)
+	writeAndReadRecords(a, total, Gzip, true)
+	writeAndReadRecords(a, total, Gzip, false)
+}
+
+func writeAndReadRecords(a *assert.Assertions, total int, compressor int, incrementalLength bool) {
 	var buf bytes.Buffer
-	w := recordio.NewWriter(&buf, -1, -1)
-	for i := 0; i < total; i++ {
-		_, err := w.Write(make([]byte, i))
-		if err != nil {
-			t.Fatal(err)
+
+	l := func(i int) int {
+		if !incrementalLength {
+			return total - i - 1
 		}
-	}
-	w.Close()
-
-	idx, err := recordio.LoadIndex(bytes.NewReader(buf.Bytes()))
-	if err != nil {
-		t.Fatal(err)
+		return i
 	}
 
-	if idx.NumRecords() != total {
-		t.Fatal("num record does not match:", idx.NumRecords(), total)
+	w := NewWriter(&buf, -1, -1)
+	for i := 0; i < total; i++ {
+		_, e := w.Write(make([]byte, l(i))) // NOTE: the first/last record is empty.
+		a.NoError(e)
 	}
+	a.NoError(w.Close())
 
-	s := recordio.NewScanner(bytes.NewReader(buf.Bytes()), idx, -1, -1)
+	idx, e := LoadIndex(bytes.NewReader(buf.Bytes()))
+	a.NoError(e)
+
+	a.Equal(total, idx.NumRecords())
+
+	s := NewScanner(bytes.NewReader(buf.Bytes()), idx, -1, -1)
 	i := 0
 	for s.Scan() {
-		if !reflect.DeepEqual(s.Record(), make([]byte, i)) {
-			t.Fatal("not equal:", len(s.Record()), len(make([]byte, i)))
-		}
+		a.True(reflect.DeepEqual(s.Record(), make([]byte, l(i))))
 		i++
 	}
+	a.Equal(total, i)
+}
 
-	if i != total {
-		t.Fatal("total count not match:", i, total)
-	}
+func TestWriteEmptyFile(t *testing.T) {
+	assert := assert.New(t)
+
+	var buf bytes.Buffer
+	w := NewWriter(&buf, 10, NoCompression) // use a small maxChunkSize.
+	assert.Nil(w.Close())
+	assert.Equal(0, buf.Len())
+
+	idx, e := LoadIndex(bytes.NewReader(buf.Bytes()))
+	assert.Nil(e)
+	assert.Equal(0, idx.NumRecords())
 }
 
 func BenchmarkRead(b *testing.B) {
@@ -64,7 +84,7 @@ func BenchmarkRead(b *testing.B) {
 		b.Fatalf("Cannot open synthesized file %s: %v", fn, e)
 	}
 
-	idx, e := recordio.LoadIndex(f)
+	idx, e := LoadIndex(f)
 	if e != nil {
 		b.Fatalf("Failed indexing synthesized file %s: %v", fn, e)
 	}
@@ -73,7 +93,7 @@ func BenchmarkRead(b *testing.B) {
 		b.Run(fmt.Sprintf("reading records %05d to %05d", s, s+rangeSize),
 			func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					scnr := recordio.NewScanner(f, idx, s, s+2*rangeSize)
+					scnr := NewScanner(f, idx, s, s+2*rangeSize)
 					for scnr.Scan() {
 						scnr.Record()
 					}
@@ -89,7 +109,7 @@ func synthesizeTempFile(records int) (fn string, e error) {
 		return "", e
 	}
 
-	w := recordio.NewWriter(bufio.NewWriter(f), 0, -1)
+	w := NewWriter(bufio.NewWriter(f), 0, -1)
 	rcd := make([]byte, 2*1024*1024)
 	for i := 0; i < records; i++ {
 		_, e = w.Write(rcd)
