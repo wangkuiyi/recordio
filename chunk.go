@@ -60,7 +60,7 @@ func (ch *chunk) write(w io.Writer, compressorID int) error {
 // compress chunk data (records) into a buffer and returns the CRC32 checksum.
 func (ch *chunk) compress(compressorID int, buf *bytes.Buffer) (uint32, error) {
 	// In addition to notations introduced in the function
-	// definition parseChunk, we add the following:
+	// definition of read, we add the following:
 	//
 	// >(buf) : a bytes.Buffer is a writer.
 	// >(compr)> : a compressor wraps a writer into another writer.
