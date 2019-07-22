@@ -13,7 +13,7 @@ import (
 )
 
 func TestWriteRead(t *testing.T) {
-	const total = 1000
+	const total = 2000
 	var buf bytes.Buffer
 	w := recordio.NewWriter(&buf, -1, -1)
 	for i := 0; i < total; i++ {
