@@ -117,11 +117,11 @@ func newCompressor(w io.WriteCloser, compressorID int) io.WriteCloser {
 	return nil
 }
 
-// read a chunk from r at the given offset.
-func read(r io.Reader) (*chunk, error) {
+// readChunk from r into the memory.
+func readChunk(r io.Reader) (*chunk, error) {
 	hdr, e := parseHeader(r)
 	if e != nil {
-		return nil, fmt.Errorf("Failed to parse chunk header: %v", e)
+		return nil, e // NOTE: must return e literally as required by FileListScanner.
 	}
 
 	// To help designing a complex I/O pipeline using Go's io

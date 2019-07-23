@@ -120,7 +120,7 @@ func (s *Scanner) Scan() bool {
 				log.Printf("Failed to seek chunk: %v", e)
 				return false
 			}
-			s.chunk, s.err = read(s.reader)
+			s.chunk, s.err = readChunk(s.reader)
 		}
 	}
 

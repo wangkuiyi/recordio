@@ -1,6 +1,9 @@
 package recordio
 
 import (
+	"errors"
+	"fmt"
+	"io"
 	"os"
 	"sort"
 
@@ -11,14 +14,6 @@ type FileList struct {
 	files         []string // filename list
 	indices       []*Index // index per file
 	accumFileLens []int    // accumulative file sizes in records
-}
-
-type FileListScanner struct {
-	fs         *FileList
-	start, end int         // A logical view of the range.
-	ch         chan string // From background reading goroutine to Next().
-	stop       chan int    // From Close() to the background goroutine.
-	err        error
 }
 
 // NewFileList build indices of a set of files.
@@ -80,47 +75,110 @@ func (fs *FileList) TotalRecords() int {
 	return 0
 }
 
-func NewFileListScanner(fs *FileList, start, len int) *FileListScanner {
+var (
+	ErrStopped = errors.New("FileListScanner.Close() stopped scanning")
+)
+
+type FileListScanner struct {
+	fl         *FileList
+	start, end int         // A logical view of the range.
+	ch         chan []byte // From background reading goroutine to Next().
+	stop       chan int    // From Close() to the background goroutine.
+	err        error
+}
+
+func NewFileListScanner(fl *FileList, start, len int) *FileListScanner {
 	if start < 0 {
 		start = 0
 	}
+	end := start + len
 	if len < 0 {
-		len = fs.TotalRecords()
+		end = fl.TotalRecords()
 	}
 
 	rs := &FileListScanner{
-		fs:    fs,
+		fl:    fl,
 		start: start,
-		end:   start + len,
-		ch:    make(chan string),
+		end:   end,
+		ch:    make(chan []byte, 1000), // Buffer size is critial to performance. Currently ad-hoc.
 		stop:  make(chan int)}
 
-	go func() { rs.err = rs.read() }()
+	go func() { rs.err = rs.scan() }()
 	return rs
 }
 
-func (scnr *FileListScanner) read() error {
-	// defer close(scnr.ch) // No more emits to ch after read returns,
+func (scnr *FileListScanner) scan() error {
+	defer close(scnr.ch) // No more emits to ch after read returns,
 
-	// cur := scnr.start
-	// file, chunk, record := scnr.fs.Locate(cur)
-
-	// f, e := os.Open(scnr.fs.files[file])
-	// if e != nil {
-	// 	return e
-	// }
-
-	// idx := scnr.fs.indices[file]
-	// if _, e := f.Seek(idx.chunkOffsets[chunk], io.SeekStart); e != nil {
-	// 	return fmt.Errorf("Failed to seek to chunk: %v", e)
-	// }
+	cur := scnr.start
+	file, chunk, record := scnr.fl.Locate(cur)
+	for cur < scnr.end {
+		n, e := scnr.scanFile(file, chunk, record, scnr.end-cur)
+		if e != nil && e != io.EOF {
+			return e
+		}
+		cur += n
+		file++
+		chunk, record = 0, 0 // Since the second file, read from the first record.
+	}
 	return nil
 }
 
-func (*FileListScanner) Next() (string, error) {
-	return "", nil
+// scanFile reads at most todo records from the record-th in chunk of
+// file.  It returns when it reaches the end of the file or having
+// read enough number of records.  In either case, it returns the
+// number of read records.
+func (scnr *FileListScanner) scanFile(file, chunk, record, todo int) (done int, err error) {
+	f, e := os.Open(scnr.fl.files[file])
+	if e != nil {
+		return 0, e
+	}
+	defer f.Close()
+
+	idx := scnr.fl.indices[file]
+	if _, e := f.Seek(idx.chunkOffsets[chunk], io.SeekStart); e != nil {
+		return 0, fmt.Errorf("Failed to seek to chunk: %v", e)
+	}
+
+	for todo > 0 {
+		n, e := scnr.scanChunk(f, record, todo)
+		todo -= n
+		done += n
+		if e != nil {
+			return done, e
+		}
+		record = 0 // Since the second chunk, we read since its first record.
+	}
+
+	return done, nil
 }
 
-func (fs *FileListScanner) Err() error {
-	return fs.err
+// scanChunk reads r for a chunk and returns at most todo records
+// starting from the record-th.
+func (scnr *FileListScanner) scanChunk(r io.Reader, record, todo int) (done int, err error) {
+	chnk, e := readChunk(r)
+	if e != nil {
+		return done, e
+	}
+
+	for i := record; todo > 0 && i < len(chnk.records); i++ {
+		select {
+		case <-scnr.stop:
+			return done, ErrStopped
+
+		default:
+			scnr.ch <- chnk.records[i]
+			done++
+			todo--
+		}
+	}
+	return done, nil
+}
+
+func (fl *FileListScanner) Chan() chan ([]byte) {
+	return fl.ch
+}
+
+func (fl *FileListScanner) Error() error {
+	return fl.err
 }
