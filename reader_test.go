@@ -51,3 +51,17 @@ func TestSyncReadOldFile(t *testing.T) {
 
 	a.NoError(f.Close())
 }
+
+func TestAsyncReadOldFile(t *testing.T) {
+	a := assert.New(t)
+
+	fl, e := NewFileList([]string{"/tmp/a_file.recordio"})
+	a.NoError(e)
+
+	s := NewFileListScanner(fl, -1, -1)
+	n := 0
+	for range s.Chan() {
+		n++
+	}
+	t.Logf("Read %d records", n)
+}
