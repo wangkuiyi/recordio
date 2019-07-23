@@ -37,23 +37,23 @@ class TestAll(unittest.TestCase):
         self.assertEqual(r.record(), None)
         r.close()
 
-    # def test_big_write_read(self):
-    #     gen_rec = lambda: bytes(
-    #         bytearray(random.getrandbits(8) for _ in range(4 * 1024 * 1024))
-    #     )
-    #     # 10 records, each has size 4Mi bytes.
-    #     records = [gen_rec() for _ in range(10)]
+    def test_big_write_read(self):
+        def gen_rec(): return bytes(
+            bytearray(random.getrandbits(8) for _ in range(4 * 1024 * 1024))
+        )
+        # 10 records, each has size 4Mi bytes.
+        records = [gen_rec() for _ in range(10)]
 
-    #     path = os.path.join(self.tmp_dir.name, "big.recordio")
-    #     w = recordio.Writer(path)
-    #     for r in records:
-    #         w.write(r)
-    #     w.close()
+        path = os.path.join(self.tmp_dir.name, "big.recordio")
+        w = recordio.Writer(path)
+        for r in records:
+            w.write(r)
+        w.close()
 
-    #     s = recordio.Scanner(path)
-    #     for r in records:
-    #         self.assertEqual(r, s.record())
-    #     s.close()
+        s = recordio.Scanner(path)
+        for r in records:
+            self.assertEqual(r, s.record())
+        s.close()
 
     def test_index(self):
         path = os.path.join(self.tmp_dir.name, "1.record")
