@@ -1,6 +1,7 @@
 package recordio
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,4 +30,24 @@ func TestIndexLocate(t *testing.T) {
 	c, o = idx.Locate(200)
 	assert.Equal(-1, c)
 	assert.Equal(-1, o)
+}
+
+func TestSyncReadOldFile(t *testing.T) {
+	a := assert.New(t)
+	f, e := os.Open("/tmp/a_file.recordio")
+	a.NoError(e)
+
+	idx, e := LoadIndex(f)
+	a.NoError(e)
+
+	t.Logf("Index contains %d records", idx.NumRecords())
+
+	s := NewScanner(f, idx, -1, -1)
+	n := 0
+	for s.Scan() {
+		a.Equal(2*1024, len(s.Record()))
+	}
+	t.Logf("Read %d records", n)
+
+	a.NoError(f.Close())
 }
