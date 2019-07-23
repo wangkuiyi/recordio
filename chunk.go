@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"log"
 
 	"github.com/golang/snappy"
 )
@@ -113,6 +114,8 @@ func newCompressor(w io.WriteCloser, compressorID int) io.WriteCloser {
 		return snappy.NewWriter(w)
 	case Gzip:
 		return gzip.NewWriter(w)
+	default:
+		log.Fatalf("Unknown compressor ID: %d", compressorID)
 	}
 	return nil
 }
@@ -170,10 +173,7 @@ func readChunk(r io.Reader) (*chunk, error) {
 		r := make([]byte, l)
 		e := readNBytes(decomp, r)
 		if e != nil {
-			if !(e == io.EOF && l == 0 && i == int(hdr.numRecords)-1) {
-				// Read returns EOF if an "" is at the end of a chunk.
-				return nil, fmt.Errorf("Failed to read a record: %v", e)
-			}
+			return nil, fmt.Errorf("Failed to read a record: %v", e)
 		}
 		ch.records = append(ch.records, r)
 		ch.numBytes += len(r)
