@@ -16,11 +16,11 @@ type FileList struct {
 	accumFileLens []int    // accumulative file sizes in records
 }
 
-// NewFileList build indices of a set of files.
+// NewFileList builds indices of a set of files.
 //
-// NOTE: If a caller is going to create to FileList objects that scan
-// the same set of files, it's the caller's responsibility to make
-// sure that the two fn parameters have files in the same order.
+// NOTE: If a caller is going to create more than one FileList objects
+// that scan the same set of files, the caller must make sure that
+// they have the same file list of the same order in parameter fn.
 func NewFileList(fn []string) (*FileList, error) {
 	idcs := make([]*Index, len(fn))
 
@@ -91,15 +91,14 @@ func NewFileListScanner(fl *FileList, start, len int) *FileListScanner {
 	if start < 0 {
 		start = 0
 	}
-	end := start + len
-	if len < 0 {
-		end = fl.TotalRecords()
+	if len < 0 || start+len > fl.TotalRecords() {
+		len = fl.TotalRecords() - start
 	}
 
 	rs := &FileListScanner{
 		fl:    fl,
 		start: start,
-		end:   end,
+		end:   start + len,
 		ch:    make(chan []byte, 1000), // Buffer size is critial to performance. Currently ad-hoc.
 		stop:  make(chan int)}
 
