@@ -1,4 +1,4 @@
-package recordio_test
+package recordio
 
 import (
 	"bufio"
@@ -11,13 +11,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wangkuiyi/recordio"
 )
 
 func TestWriteRead(t *testing.T) {
 	const total = 2000
 	var buf bytes.Buffer
-	w := recordio.NewWriter(&buf, -1, -1)
+	w := NewWriter(&buf, -1, -1)
 	for i := 0; i < total; i++ {
 		_, err := w.Write(make([]byte, i))
 		if err != nil {
@@ -26,7 +25,7 @@ func TestWriteRead(t *testing.T) {
 	}
 	w.Close()
 
-	idx, err := recordio.LoadIndex(bytes.NewReader(buf.Bytes()))
+	idx, err := LoadIndex(bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +34,7 @@ func TestWriteRead(t *testing.T) {
 		t.Fatal("num record does not match:", idx.NumRecords(), total)
 	}
 
-	s := recordio.NewScanner(bytes.NewReader(buf.Bytes()), idx, -1, -1)
+	s := NewScanner(bytes.NewReader(buf.Bytes()), idx, -1, -1)
 	i := 0
 	for s.Scan() {
 		if !reflect.DeepEqual(s.Record(), make([]byte, i)) {
@@ -61,7 +60,7 @@ func TestWriteAndReadBigRecords(t *testing.T) {
 		r[i] = byte('A' + i%26)
 	}
 
-	w := recordio.NewWriter(f, -1, recordio.NoCompression)
+	w := NewWriter(f, -1, NoCompression)
 	total := 10
 	for i := 0; i < total; i++ {
 		l, e := w.Write(r)
@@ -72,14 +71,14 @@ func TestWriteAndReadBigRecords(t *testing.T) {
 
 	f, e = os.Open(f.Name())
 	a.NoError(e)
-	idx, e := recordio.LoadIndex(f)
+	idx, e := LoadIndex(f)
 	a.NoError(e)
 	a.NoError(f.Close())
 	a.Equal(total, idx.NumRecords())
 
 	f, e = os.Open(f.Name())
 	a.NoError(e)
-	scnr := recordio.NewScanner(f, idx, -1, -1)
+	scnr := NewScanner(f, idx, -1, -1)
 	n := 0
 	for scnr.Scan() {
 		a.True(reflect.DeepEqual(r, scnr.Record()))
@@ -106,7 +105,7 @@ func BenchmarkRead(b *testing.B) {
 		b.Fatalf("Cannot open synthesized file %s: %v", fn, e)
 	}
 
-	idx, e := recordio.LoadIndex(f)
+	idx, e := LoadIndex(f)
 	if e != nil {
 		b.Fatalf("Failed indexing synthesized file %s: %v", fn, e)
 	}
@@ -115,7 +114,7 @@ func BenchmarkRead(b *testing.B) {
 		b.Run(fmt.Sprintf("reading records %05d to %05d", s, s+rangeSize),
 			func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					scnr := recordio.NewScanner(f, idx, s, s+2*rangeSize)
+					scnr := NewScanner(f, idx, s, s+2*rangeSize)
 					for scnr.Scan() {
 						scnr.Record()
 					}
@@ -131,7 +130,7 @@ func synthesizeTempFile(records int) (fn string, e error) {
 		return "", e
 	}
 
-	w := recordio.NewWriter(bufio.NewWriter(f), 0, -1)
+	w := NewWriter(bufio.NewWriter(f), 0, -1)
 	rcd := make([]byte, 2*1024*1024)
 	for i := 0; i < records; i++ {
 		_, e = w.Write(rcd)

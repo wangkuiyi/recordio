@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"log"
 
 	"github.com/golang/snappy"
 )
@@ -113,15 +114,17 @@ func newCompressor(w io.WriteCloser, compressorID int) io.WriteCloser {
 		return snappy.NewWriter(w)
 	case Gzip:
 		return gzip.NewWriter(w)
+	default:
+		log.Fatalf("Unknown compressor ID: %d", compressorID)
 	}
 	return nil
 }
 
-// read a chunk from r at the given offset.
-func read(r io.Reader) (*chunk, error) {
+// readChunk from r into the memory.
+func readChunk(r io.Reader) (*chunk, error) {
 	hdr, e := parseHeader(r)
 	if e != nil {
-		return nil, fmt.Errorf("Failed to parse chunk header: %v", e)
+		return nil, e // NOTE: must return e literally as required by FileListScanner.
 	}
 
 	// To help designing a complex I/O pipeline using Go's io
@@ -170,10 +173,7 @@ func read(r io.Reader) (*chunk, error) {
 		r := make([]byte, l)
 		e := readNBytes(decomp, r)
 		if e != nil {
-			if !(e == io.EOF && l == 0 && i == int(hdr.numRecords)-1) {
-				// Read returns EOF if an "" is at the end of a chunk.
-				return nil, fmt.Errorf("Failed to read a record: %v", e)
-			}
+			return nil, fmt.Errorf("Failed to read a record: %v", e)
 		}
 		ch.records = append(ch.records, r)
 		ch.numBytes += len(r)
