@@ -158,14 +158,22 @@ func readChunk(r io.Reader) (*chunk, error) {
 	var e1 error
 	go func() {
 		defer pw.Close()
-		_, e1 = io.CopyN(pw, r, int64(hdr.compressedSize))
+		todo := int64(hdr.compressedSize)
+		for todo > 0 {
+			n, e := io.CopyN(pw, r, todo)
+			if e != nil {
+				e1 = e
+				return
+			}
+			todo -= n
+		}
 	}()
 
 	// Outtake data.
 	ch := &chunk{}
 	for i := 0; i < int(hdr.numRecords); i++ {
 		var rs [4]byte
-		if _, e = decomp.Read(rs[:]); e != nil {
+		if e = readNBytes(decomp, rs[:]); e != nil {
 			return nil, fmt.Errorf("Failed to read record length: %v", e)
 		}
 
