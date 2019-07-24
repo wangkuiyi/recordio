@@ -15,7 +15,7 @@ VOLUME /work
 RUN echo "(cd /work/python && python setup.py bdist_wheel && pip uninstall recordio && pip install dist/*.whl)" > /install_recordio.sh
 RUN chmod +x /install_recordio.sh
 
-RUN echo "(cd /work/python/examples && /install_recordio.sh && pytest)" > /test_recordio.sh
+RUN echo "(cd /work/python/examples && /install_recordio.sh && PYTHONPATH=$PYTHONPATH:. ./synthesize_and_read.py)" > /test_recordio.sh
 RUN chmod +x /test_recordio.sh
 
 CMD ["bash", "/test_recordio.sh"]
