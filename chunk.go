@@ -127,6 +127,8 @@ func readChunk(r io.Reader) (*chunk, error) {
 		return nil, e // NOTE: must return e literally as required by FileListScanner.
 	}
 
+	log.Printf("Header %++v", hdr)
+
 	// To help designing a complex I/O pipeline using Go's io
 	// package, let us introduce the following notations:
 	//
@@ -178,9 +180,11 @@ func readChunk(r io.Reader) (*chunk, error) {
 		}
 
 		l := int(binary.LittleEndian.Uint32(rs[:]))
+		// log.Printf("record legnth %d", l)
 		r := make([]byte, l)
 		e := readNBytes(decomp, r)
 		if e != nil {
+			log.Printf("Reading the %d-th record in the chunk", i)
 			return nil, fmt.Errorf("Failed to read a record: %v", e)
 		}
 		ch.records = append(ch.records, r)

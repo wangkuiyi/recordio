@@ -41,6 +41,7 @@ func TestSyncReadOldFile(t *testing.T) {
 	a.NoError(e)
 
 	t.Logf("Index contains %d records", idx.NumRecords())
+	t.Logf("Chunk sizes %v", idx.chunkRecords)
 
 	s := NewScanner(f, idx, -1, -1)
 	n := 0

@@ -116,6 +116,7 @@ func (s *Scanner) Scan() bool {
 	} else {
 		if ci, _ := s.index.Locate(s.cur); s.chunkIndex != ci {
 			s.chunkIndex = ci
+			log.Printf("Seek to %d", s.index.chunkOffsets[ci])
 			if _, e := s.reader.Seek(s.index.chunkOffsets[ci], io.SeekStart); e != nil {
 				log.Printf("Failed to seek chunk: %v", e)
 				return false
@@ -124,6 +125,9 @@ func (s *Scanner) Scan() bool {
 		}
 	}
 
+	if s.err != nil {
+		log.Printf("Scan error %v", s.err)
+	}
 	return s.err == nil
 }
 
