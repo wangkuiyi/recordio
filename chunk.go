@@ -171,7 +171,7 @@ func readChunk(r io.Reader) (*chunk, error) {
 
 		l := int(binary.LittleEndian.Uint32(rs[:]))
 		r := make([]byte, l)
-		e := readNBytes(decomp, r)
+		_, e := io.ReadFull(decomp, r)
 		if e != nil {
 			return nil, fmt.Errorf("Failed to read a record: %v", e)
 		}
@@ -188,18 +188,6 @@ func readChunk(r io.Reader) (*chunk, error) {
 	}
 
 	return ch, nil
-}
-
-func readNBytes(r io.Reader, o []byte) error {
-	s := 0
-	for s < len(o) {
-		n, e := r.Read(o[s:])
-		if e != nil {
-			return e
-		}
-		s += n
-	}
-	return nil
 }
 
 func newDecompressor(src io.Reader, compressorID int) (io.Reader, error) {
