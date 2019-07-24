@@ -158,15 +158,7 @@ func readChunk(r io.Reader) (*chunk, error) {
 	var e1 error
 	go func() {
 		defer pw.Close()
-		todo := int64(hdr.compressedSize)
-		for todo > 0 {
-			n, e := io.CopyN(pw, r, todo)
-			if e != nil {
-				e1 = e
-				return
-			}
-			todo -= n
-		}
+		_, e1 = io.CopyN(pw, r, int64(hdr.compressedSize))
 	}()
 
 	// Outtake data.
