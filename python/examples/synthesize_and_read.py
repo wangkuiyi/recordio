@@ -78,28 +78,28 @@ def synthesize(args):
 
 
 def synthesize_and_read_data():
-    with tempfile.TemporaryDirectory() as dir:
+    if not os.path.exists(os.path.join(os.getcwd(), "mnsit")):
         synthesize(argparse.Namespace(
-            dir=dir,
+            dir=os.getcwd(),
             records_per_shard=16*1024,
             dataset="mnist",
             fraction=1.0))
 
-        tasks = [
-            (os.path.join(dir, "mnist/train/data-00000"), 100, 256, 256),
-            (os.path.join(dir, "mnist/train/data-00001"), 1024, 2048, 2048),
-            (os.path.join(dir, "mnist/train/data-00002"), 0, -1, 16384),
-        ]
+    tasks = [
+        (os.path.join(os.getcwd(), "mnist/train/data-00000"), 100, 256, 256),
+        (os.path.join(os.getcwd(), "mnist/train/data-00001"), 1024, 2048, 2048),
+        (os.path.join(os.getcwd(), "mnist/train/data-00002"), 0, -1, 16384),
+    ]
 
-        for t in tasks:
-            counts = 0
-            with closing(recordio.Scanner(t[0], t[1], t[2])) as reader:
+    for t in tasks:
+        counts = 0
+        with closing(recordio.Scanner(t[0], t[1], t[2])) as reader:
+            r = reader.record()
+            while r:
+                counts += 1
                 r = reader.record()
-                while r:
-                    counts += 1
-                    r = reader.record()
-                    print(counts, t[3])
-                    assert counts == t[3]
+                print(counts, t[3])
+                assert counts == t[3]
 
 
 if __name__ == "__main__":
