@@ -175,7 +175,7 @@ func readChunk(r io.Reader) (*chunk, error) {
 	ch := &chunk{}
 	for i := 0; i < int(hdr.numRecords); i++ {
 		var rs [4]byte
-		if _, e = decomp.Read(rs[:]); e != nil {
+		if e = readNBytes(decomp, rs[:]); e != nil {
 			return nil, fmt.Errorf("Failed to read record length: %v", e)
 		}
 

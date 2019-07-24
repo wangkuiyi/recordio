@@ -34,7 +34,7 @@ func TestIndexLocate(t *testing.T) {
 
 func TestSyncReadOldFile(t *testing.T) {
 	a := assert.New(t)
-	f, e := os.Open("/tmp/a_file.recordio")
+	f, e := os.Open("/Users/yi/Dropbox/data-00000")
 	a.NoError(e)
 
 	idx, e := LoadIndex(f)
@@ -46,7 +46,7 @@ func TestSyncReadOldFile(t *testing.T) {
 	s := NewScanner(f, idx, -1, -1)
 	n := 0
 	for s.Scan() {
-		a.Equal(2*1024, len(s.Record()))
+		n++
 	}
 	t.Logf("Read %d records", n)
 
@@ -56,7 +56,7 @@ func TestSyncReadOldFile(t *testing.T) {
 func TestAsyncReadOldFile(t *testing.T) {
 	a := assert.New(t)
 
-	fl, e := NewFileList([]string{"/tmp/a_file.recordio"})
+	fl, e := NewFileList([]string{"/Users/yi/Dropbox/data-00000"})
 	a.NoError(e)
 
 	s := NewFileListScanner(fl, -1, -1)
