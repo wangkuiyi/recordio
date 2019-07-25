@@ -10,12 +10,14 @@ ENV PATH=/usr/local/go/bin:$PATH
 RUN pip install --upgrade pip
 RUN pip install setuptools-golang pytest-runner pytest
 
-VOLUME /work
+VOLUME /go
+ENV GOPATH=/go
+ENV REPO=$GOPATH/src/github.com/wangkuiyi/recordio
 
-RUN echo "(cd /work/python && python setup.py bdist_wheel && pip uninstall recordio && pip install dist/*.whl)" > /install_recordio.sh
+RUN echo "(cd $REPO/python && python setup.py bdist_wheel && pip uninstall recordio && pip install dist/*.whl)" > /install_recordio.sh
 RUN chmod +x /install_recordio.sh
 
-RUN echo "(cd /work/python/examples && /install_recordio.sh && PYTHONPATH=$PYTHONPATH:. ./synthesize_and_read.py)" > /test_recordio.sh
+RUN echo "(cd $REPO/python/examples && /install_recordio.sh && ./synthesize_and_read.py && go test -v)" > /test_recordio.sh
 RUN chmod +x /test_recordio.sh
 
 CMD ["bash", "/test_recordio.sh"]

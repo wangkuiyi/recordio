@@ -78,7 +78,7 @@ def synthesize(args):
 
 
 def synthesize_and_read_data():
-    if not os.path.exists(os.path.join(os.getcwd(), "mnsit")):
+    if not os.path.exists(os.path.join(os.getcwd(), "mnist")):
         synthesize(argparse.Namespace(
             dir=os.getcwd(),
             records_per_shard=16*1024,
