@@ -14,7 +14,7 @@ VOLUME /go
 ENV GOPATH=/go
 ENV REPO=$GOPATH/src/github.com/wangkuiyi/recordio
 
-RUN echo "(cd $REPO/python && python setup.py bdist_wheel && pip uninstall recordio && pip install dist/*.whl)" > /install_recordio.sh
+RUN echo "(cd $REPO/python && rm -rf dist && python setup.py bdist_wheel && pip uninstall -y pyrecordio && pip install dist/*.whl)" > /install_recordio.sh
 RUN chmod +x /install_recordio.sh
 
 RUN echo "(cd $REPO/python/examples && /install_recordio.sh && ./synthesize_and_read.py && go test -v)" > /test_recordio.sh

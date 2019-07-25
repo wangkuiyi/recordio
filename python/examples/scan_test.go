@@ -19,12 +19,12 @@ func TestSyncReadOldFile(t *testing.T) {
 
 	a.Equal(16384, idx.NumRecords())
 
-	s := recordio.NewScanner(f, idx, -1, -1)
+	s := recordio.NewScanner(f, idx, 100, 256)
 	n := 0
 	for s.Scan() {
 		n++
 	}
-	a.Equal(16384, n)
+	a.Equal(256, n)
 
 	a.NoError(f.Close())
 }

@@ -98,8 +98,8 @@ def synthesize_and_read_data():
             while r:
                 counts += 1
                 r = reader.record()
-                print(counts, t[3])
-                assert counts == t[3]
+            print(counts, t[3])
+            assert counts == t[3]
 
 
 if __name__ == "__main__":
