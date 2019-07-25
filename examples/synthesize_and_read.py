@@ -5,7 +5,6 @@ from contextlib import closing
 import argparse
 import os
 import recordio
-import recordio
 import sys
 import tempfile
 import tensorflow as tf
