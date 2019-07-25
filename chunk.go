@@ -69,47 +69,43 @@ func (ch *chunk) compress(compressorID int, buf *bytes.Buffer) (uint32, error) {
 	// Then, the pipeline of dumping a chunk looks like the
 	// following:
 	//
-	// write->(compr)>(pipe)▶(tee)>(crc32)
-	//                        ▶-copy->(buf)
-	pr, pw := io.Pipe()
-	compr := newCompressor(pw, compressorID)
+	// write->(compr)>(crc32, buf)
 	chksum := crc32.NewIEEE()
-	br := io.TeeReader(pr, chksum)
+	mw := io.MultiWriter(buf, chksum)
+	compr := newCompressor(mw, compressorID)
 
 	// Write raw records and their lengths into data buffer.
-	var e1 error
-	go func() {
-		defer func() {
-			compr.Close() // Flush data out.
-			pw.Close()    // Notify the end.
-		}()
-		for _, r := range ch.records {
-			var rs [4]byte
-			binary.LittleEndian.PutUint32(rs[:], uint32(len(r)))
+	for _, r := range ch.records {
+		var rs [4]byte
+		binary.LittleEndian.PutUint32(rs[:], uint32(len(r)))
 
-			if _, e := compr.Write(rs[:]); e != nil {
-				e1 = fmt.Errorf("Failed to write record length: %v", e)
-				return
-			}
-
-			if _, e := compr.Write(r); e != nil {
-				e1 = fmt.Errorf("Failed to write record: %v", e)
-				return
-			}
+		if _, e := compr.Write(rs[:]); e != nil {
+			return 0, fmt.Errorf("Failed to write record length: %v", e)
 		}
-	}()
 
-	_, e := io.Copy(buf, br)
-	if e != nil {
-		return 0, e
+		if _, e := compr.Write(r); e != nil {
+			return 0, fmt.Errorf("Failed to write record: %v", e)
+		}
 	}
-	return chksum.Sum32(), e1
+	if e := compr.Close(); e != nil {
+		return 0, fmt.Errorf("Failed to close compressor: %v", e)
+	}
+
+	return chksum.Sum32(), nil
 }
 
-func newCompressor(w io.WriteCloser, compressorID int) io.WriteCloser {
+// TODO: use ioutil.WriteNopCloser once the following PR is in public release:
+// https://go-review.googlesource.com/c/go/+/175779#message-31dfdd1aaee623f9e80fb652af7bd0cc8cc4fcc3
+type writeNopCloser struct {
+	io.Writer
+}
+
+func (writeNopCloser) Close() error { return nil }
+
+func newCompressor(w io.Writer, compressorID int) io.WriteCloser {
 	switch compressorID {
 	case NoCompression:
-		return w
+		return writeNopCloser{w}
 	case Snappy:
 		return snappy.NewWriter(w)
 	case Gzip:
