@@ -10,7 +10,7 @@ branches:
 matrix:
   include:
     - language: python
-      python: 3.5
+      python: 3.6
 
       cache: pip
 
@@ -32,15 +32,6 @@ matrix:
           repo: wangkuiyi/recordio
 
     - language: python
-      python: 3.6
-
-      cache: pip
-
-      script:
-      - cd python
-      - python setup.py -q test
-
-    - language: python
       python: 3.7
 
       cache: pip
@@ -48,4 +39,5 @@ matrix:
       script:
       - cd python
       - python setup.py -q test
+
     - language: go
